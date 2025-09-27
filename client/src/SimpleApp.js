@@ -163,6 +163,16 @@ function SimpleApp() {
       }
     });
 
+    // 添加晶胞边界框（如果有晶胞信息）
+    if (structure.cell && structure.cell.length === 3) {
+      addUnitCellBox(viewer, structure.cell);
+      console.log('晶胞边界框添加成功');
+    }
+
+    // 添加坐标轴
+    addCoordinateAxes(viewer);
+    console.log('坐标轴添加成功');
+
     // 设置背景和渲染
     viewer.setBackgroundColor(0xffffff);
     viewer.zoomTo();
@@ -180,6 +190,110 @@ function SimpleApp() {
       renderMoleculeWith3DMol(structureData);
     }
   }, [structureData]);
+
+  // 添加晶胞边界框
+  const addUnitCellBox = (viewer, cell) => {
+    if (!cell || cell.length !== 3) return;
+
+    console.log('添加晶胞边界框...');
+
+    // 晶胞矢量
+    const a = cell[0];
+    const b = cell[1];
+    const c = cell[2];
+
+    // 晶胞的8个顶点
+    const vertices = [
+      [0, 0, 0],                    // 原点
+      a,                            // a矢量端点
+      b,                            // b矢量端点
+      c,                            // c矢量端点
+      [a[0] + b[0], a[1] + b[1], a[2] + b[2]],          // a+b
+      [a[0] + c[0], a[1] + c[1], a[2] + c[2]],          // a+c
+      [b[0] + c[0], b[1] + c[1], b[2] + c[2]],          // b+c
+      [a[0] + b[0] + c[0], a[1] + b[1] + c[1], a[2] + b[2] + c[2]]  // a+b+c
+    ];
+
+    // 晶胞的12条边
+    const edges = [
+      [0, 1], [0, 2], [0, 3],       // 从原点出发的3条边
+      [1, 4], [1, 5],               // 从a端点的边
+      [2, 4], [2, 6],               // 从b端点的边
+      [3, 5], [3, 6],               // 从c端点的边
+      [4, 7], [5, 7], [6, 7]        // 到对角顶点的边
+    ];
+
+    // 添加边线
+    edges.forEach((edge) => {
+      const start = vertices[edge[0]];
+      const end = vertices[edge[1]];
+
+      viewer.addCylinder({
+        start: {x: start[0], y: start[1], z: start[2]},
+        end: {x: end[0], y: end[1], z: end[2]},
+        radius: 0.05,
+        color: 'black',
+        alpha: 0.6
+      });
+    });
+
+    console.log('晶胞边界框添加完成');
+  };
+
+  // 添加坐标轴
+  const addCoordinateAxes = (viewer) => {
+    console.log('添加坐标轴...');
+
+    const axisLength = 3.0;
+    const axisRadius = 0.1;
+
+    // a轴 (红色)
+    viewer.addCylinder({
+      start: {x: 0, y: 0, z: 0},
+      end: {x: axisLength, y: 0, z: 0},
+      radius: axisRadius,
+      color: 'red',
+      alpha: 0.9
+    });
+
+    viewer.addSphere({
+      center: {x: axisLength, y: 0, z: 0},
+      radius: axisRadius * 2,
+      color: 'red'
+    });
+
+    // b轴 (绿色)
+    viewer.addCylinder({
+      start: {x: 0, y: 0, z: 0},
+      end: {x: 0, y: axisLength, z: 0},
+      radius: axisRadius,
+      color: 'green',
+      alpha: 0.9
+    });
+
+    viewer.addSphere({
+      center: {x: 0, y: axisLength, z: 0},
+      radius: axisRadius * 2,
+      color: 'green'
+    });
+
+    // c轴 (蓝色)
+    viewer.addCylinder({
+      start: {x: 0, y: 0, z: 0},
+      end: {x: 0, y: 0, z: axisLength},
+      radius: axisRadius,
+      color: 'blue',
+      alpha: 0.9
+    });
+
+    viewer.addSphere({
+      center: {x: 0, y: 0, z: axisLength},
+      radius: axisRadius * 2,
+      color: 'blue'
+    });
+
+    console.log('坐标轴添加完成');
+  };
 
   useEffect(() => {
     fetchSessions();
