@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # Redis for session management
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  # ASE MCP Server
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    ports:
+      - "8000:8000"
+      - "8001:8001"  # WebSocket port
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - PYTHONPATH=/app
+    volumes:
+      - ./server:/app/server
+      - ./data:/app/data
+    command: python server/main.py
+
+  # Frontend client
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mcp-server
+    volumes:
+      - ./client/src:/app/src
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+      - REACT_APP_WS_URL=ws://localhost:8001
+
+volumes:
+  redis_data:

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "ase-mcp": {
+      "command": "python",
+      "args": ["server/main.py", "--mcp-only"],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": ".",
+        "REDIS_URL": "redis://localhost:6379"
+      }
+    }
+  }
+}
