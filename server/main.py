@@ -9,6 +9,7 @@ import logging
 import os
 import signal
 import sys
+import argparse
 from typing import Optional
 from concurrent.futures import ThreadPoolExecutor
 import uvicorn
@@ -43,7 +44,9 @@ class ASEMCPApplication:
         web_port: int = 8000,
         websocket_port: int = 8001,
         enable_mcp: bool = True,
-        enable_web: bool = True
+        enable_web: bool = True,
+        serve_static: bool = True,
+        allowed_origins: list = None
     ):
         self.redis_url = redis_url
         self.web_host = web_host
@@ -51,6 +54,8 @@ class ASEMCPApplication:
         self.websocket_port = websocket_port
         self.enable_mcp = enable_mcp
         self.enable_web = enable_web
+        self.serve_static = serve_static
+        self.allowed_origins = allowed_origins or ["*"]
 
         # 核心组件
         self.session_manager = SessionManager(redis_url)
@@ -94,7 +99,9 @@ class ASEMCPApplication:
                     port=self.web_port,
                     websocket_port=self.websocket_port,
                     session_manager=self.session_manager,
-                    websocket_server=self.websocket_server
+                    websocket_server=self.websocket_server,
+                    serve_static=self.serve_static,
+                    allowed_origins=self.allowed_origins
                 )
                 # 标记为使用外部服务
                 self.web_server._external_services = True
@@ -214,15 +221,44 @@ def setup_signal_handlers(app: ASEMCPApplication):
     signal.signal(signal.SIGTERM, signal_handler)
 
 
+def parse_args():
+    """解析命令行参数"""
+    parser = argparse.ArgumentParser(description="ASE MCP Server - 原子模拟环境MCP服务器")
+    parser.add_argument("--api-only", action="store_true",
+                       help="仅运行API服务器，不提供前端静态文件")
+    parser.add_argument("--mcp-only", action="store_true",
+                       help="仅运行MCP服务器，用于CLI模式")
+    parser.add_argument("--no-websocket", action="store_true",
+                       help="禁用WebSocket服务器")
+    parser.add_argument("--allowed-origins", nargs="*",
+                       default=["*"], help="允许的CORS源，支持多个")
+    parser.add_argument("--redis-url", default="redis://localhost:6379",
+                       help="Redis连接URL")
+    parser.add_argument("--host", default="0.0.0.0",
+                       help="Web服务器监听地址")
+    parser.add_argument("--port", type=int, default=8000,
+                       help="Web服务器端口")
+    parser.add_argument("--websocket-port", type=int, default=8001,
+                       help="WebSocket服务器端口")
+    return parser.parse_args()
+
+
 async def main():
     """主函数"""
-    # 从环境变量获取配置
-    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
-    web_host = os.getenv("WEB_HOST", "0.0.0.0")
-    web_port = int(os.getenv("WEB_PORT", "8000"))
-    websocket_port = int(os.getenv("WEBSOCKET_PORT", "8001"))
+    # 解析命令行参数
+    args = parse_args()
+
+    # 从环境变量获取配置，命令行参数优先
+    redis_url = os.getenv("REDIS_URL", args.redis_url)
+    web_host = os.getenv("WEB_HOST", args.host)
+    web_port = int(os.getenv("WEB_PORT", args.port))
+    websocket_port = int(os.getenv("WEBSOCKET_PORT", args.websocket_port))
     enable_mcp = os.getenv("ENABLE_MCP", "true").lower() == "true"
     enable_web = os.getenv("ENABLE_WEB", "true").lower() == "true"
+
+    # API-only模式禁用静态文件服务
+    serve_static = not args.api_only and os.getenv("SERVE_STATIC", "true").lower() == "true"
+    allowed_origins = args.allowed_origins
 
     # 打印启动信息
     logger.info("=" * 60)
@@ -233,6 +269,8 @@ async def main():
     logger.info(f"WebSocket服务器: {web_host}:{websocket_port}")
     logger.info(f"启用MCP服务器: {enable_mcp}")
     logger.info(f"启用Web服务器: {enable_web}")
+    logger.info(f"静态文件服务: {serve_static}")
+    logger.info(f"允许的CORS源: {allowed_origins}")
     logger.info("=" * 60)
 
     # 创建应用程序实例
@@ -242,7 +280,9 @@ async def main():
         web_port=web_port,
         websocket_port=websocket_port,
         enable_mcp=enable_mcp,
-        enable_web=enable_web
+        enable_web=enable_web,
+        serve_static=serve_static,
+        allowed_origins=allowed_origins
     )
 
     # 设置信号处理器
@@ -286,11 +326,11 @@ def run_mcp_only():
 
 
 if __name__ == "__main__":
-    # 检查是否为MCP模式
+    # 简单检查MCP模式（在parse_args之前）
     if len(sys.argv) > 1 and sys.argv[1] == "--mcp-only":
         run_mcp_only()
     else:
-        # 运行完整应用程序
+        # 运行完整应用程序（包含命令行参数解析）
         try:
             asyncio.run(main())
         except KeyboardInterrupt:

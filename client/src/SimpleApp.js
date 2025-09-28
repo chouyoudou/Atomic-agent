@@ -27,8 +27,9 @@ function SimpleApp() {
   }, []);
 
   useEffect(() => {
-    // 连接WebSocket
-    const ws = new WebSocket('ws://localhost:8001');
+    // 连接WebSocket - 使用环境变量配置
+    const wsUrl = process.env.REACT_APP_WEBSOCKET_URL || 'ws://localhost:8001';
+    const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
       console.log('WebSocket连接成功');
@@ -70,7 +71,8 @@ function SimpleApp() {
   // 获取会话列表
   const fetchSessions = async () => {
     try {
-      const response = await fetch('/api/sessions');
+      const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || '';
+      const response = await fetch(`${apiBaseUrl}/api/sessions`);
       const data = await response.json();
       setSessions(data.sessions || []);
     } catch (error) {
@@ -82,7 +84,8 @@ function SimpleApp() {
   const fetchSessionStructure = async (sessionId) => {
     try {
       console.log('正在获取会话结构:', sessionId);
-      const response = await fetch(`/api/sessions/${sessionId}`);
+      const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || '';
+      const response = await fetch(`${apiBaseUrl}/api/sessions/${sessionId}`);
       console.log('响应状态:', response.status);
       const data = await response.json();
       console.log('完整响应数据:', data);

@@ -38,12 +38,16 @@ class ASEWebServer:
         port: int = 8000,
         websocket_port: int = 8001,
         session_manager: Optional[SessionManager] = None,
-        websocket_server: Optional[WebSocketServer] = None
+        websocket_server: Optional[WebSocketServer] = None,
+        serve_static: bool = True,
+        allowed_origins: list = None
     ):
         self.redis_url = redis_url
         self.host = host
         self.port = port
         self.websocket_port = websocket_port
+        self.serve_static = serve_static
+        self.allowed_origins = allowed_origins or ["*"]
 
         # 使用传入的实例或创建新的
         self.session_manager = session_manager or SessionManager(redis_url)
@@ -83,21 +87,28 @@ class ASEWebServer:
             lifespan=lifespan
         )
 
-        # CORS配置
+        # CORS配置 - 支持前后端分离
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=["*"],  # 生产环境中应该限制具体域名
+            allow_origins=self.allowed_origins,  # 可配置的前端域名
             allow_credentials=True,
-            allow_methods=["*"],
+            allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             allow_headers=["*"],
         )
 
         self.setup_routes(app)
 
-        # 静态文件服务 (放在最后，作为fallback)
-        static_path = os.path.join(os.path.dirname(__file__), "../client/build")
-        if os.path.exists(static_path):
-            app.mount("/", StaticFiles(directory=static_path, html=True), name="frontend")
+        # 可选的静态文件服务 (仅在serve_static=True时启用)
+        if self.serve_static:
+            static_path = os.path.join(os.path.dirname(__file__), "../client/build")
+            if os.path.exists(static_path):
+                app.mount("/", StaticFiles(directory=static_path, html=True), name="frontend")
+                logger.info(f"静态文件服务已启用: {static_path}")
+            else:
+                logger.warning(f"静态文件目录不存在: {static_path}")
+        else:
+            logger.info("静态文件服务已禁用 - 运行在纯API模式")
+
         return app
 
     def setup_routes(self, app: FastAPI):
