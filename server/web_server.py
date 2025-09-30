@@ -22,6 +22,7 @@ from models.structure import (
     ErrorResponse
 )
 from models.session import SessionSummary
+from api.structure_validation import router as validation_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -97,6 +98,7 @@ class ASEWebServer:
         )
 
         self.setup_routes(app)
+        app.include_router(validation_router)
 
         # Optional static file serving (only enabled when serve_static=True)
         if self.serve_static:

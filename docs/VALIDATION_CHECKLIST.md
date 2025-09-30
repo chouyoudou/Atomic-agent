@@ -75,6 +75,12 @@ def calculate_rmsd_from_ideal(positions: np.ndarray, ideal_geometry: str) -> flo
 - Test coverage target: >90%
 - Tests must be deterministic and reproducible
 
+**CRITICAL RULES**:
+- ❌ **NO simplification** - Even if slow, implement full functionality
+- ❌ **NO skipping tests** - All tests must pass, no pytest.mark.skip
+- ❌ **NO workarounds** - Don't bypass issues with temporary solutions
+- ✅ **Report blockers immediately** - If truly stuck, stop and report to user
+
 ### 4. Robocrystallographer Integration Points
 
 Key classes to inherit/use:
