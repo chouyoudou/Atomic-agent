@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-ASE MCP Server 基本用法示例
-演示如何通过Python API使用MCP工具
+ASE MCP Server Basic Usage Examples
+Demonstrates how to use MCP tools through Python API
 """
 
 import asyncio
@@ -11,22 +11,22 @@ from mcp.client.stdio import stdio_client
 
 
 async def basic_usage_example():
-    """基本用法示例"""
+    """Basic usage examples"""
 
-    # 连接到MCP服务器
+    # Connect to MCP server
     async with stdio_client() as streams:
         async with ClientSession(streams[0], streams[1]) as session:
 
-            # 获取可用工具
+            # Get available tools
             tools = await session.list_tools()
-            print("可用工具:")
+            print("Available tools:")
             for tool in tools.tools:
                 print(f"  - {tool.name}: {tool.description}")
 
             print("\n" + "="*50)
 
-            # 1. 创建铜的FCC结构
-            print("1. 创建铜的FCC结构...")
+            # 1. Create copper FCC structure
+            print("1. Creating copper FCC structure...")
             result = await session.call_tool(
                 "create_structure",
                 {
@@ -40,15 +40,15 @@ async def basic_usage_example():
             response = json.loads(result.content[0].text)
             if response["success"]:
                 session_id = response["session_id"]
-                print(f"✓ 结构创建成功，会话ID: {session_id}")
-                print(f"  原子数: {response['structure_data']['total_atoms']}")
-                print(f"  化学式: {response['structure_data']['formula']}")
+                print(f"✓ Structure created successfully, session ID: {session_id}")
+                print(f"  Number of atoms: {response['structure_data']['total_atoms']}")
+                print(f"  Chemical formula: {response['structure_data']['formula']}")
             else:
-                print(f"✗ 创建失败: {response['message']}")
+                print(f"✗ Creation failed: {response['message']}")
                 return
 
-            # 2. 旋转结构
-            print("\n2. 旋转结构45度...")
+            # 2. Rotate structure
+            print("\n2. Rotating structure 45 degrees...")
             result = await session.call_tool(
                 "modify_structure",
                 {
@@ -63,12 +63,12 @@ async def basic_usage_example():
 
             response = json.loads(result.content[0].text)
             if response["success"]:
-                print("✓ 结构旋转成功")
+                print("✓ Structure rotation successful")
             else:
-                print(f"✗ 旋转失败: {response['message']}")
+                print(f"✗ Rotation failed: {response['message']}")
 
-            # 3. 计算能量
-            print("\n3. 计算能量...")
+            # 3. Calculate energy
+            print("\n3. Calculating energy...")
             result = await session.call_tool(
                 "calculate_properties",
                 {
@@ -80,12 +80,12 @@ async def basic_usage_example():
             response = json.loads(result.content[0].text)
             if response["success"]:
                 energy = response["properties"]["energy"]
-                print(f"✓ 能量计算完成: {energy:.4f} eV")
+                print(f"✓ Energy calculation completed: {energy:.4f} eV")
             else:
-                print(f"✗ 计算失败: {response['message']}")
+                print(f"✗ Calculation failed: {response['message']}")
 
-            # 4. 预览结构
-            print("\n4. 预览结构...")
+            # 4. Preview structure
+            print("\n4. Previewing structure...")
             result = await session.call_tool(
                 "preview_structure",
                 {
@@ -97,13 +97,13 @@ async def basic_usage_example():
             response = json.loads(result.content[0].text)
             if response["success"]:
                 structure_info = response["structure_data"]["structure_info"]
-                print("✓ 结构信息:")
-                print(f"  体积: {structure_info.get('cell_volume', 'N/A')} Ų")
-                print(f"  质心: {structure_info.get('center_of_mass', 'N/A')}")
-                print(f"  唯一元素: {structure_info.get('unique_elements', 'N/A')}")
+                print("✓ Structure information:")
+                print(f"  Volume: {structure_info.get('cell_volume', 'N/A')} Ų")
+                print(f"  Center of mass: {structure_info.get('center_of_mass', 'N/A')}")
+                print(f"  Unique elements: {structure_info.get('unique_elements', 'N/A')}")
 
-            # 5. 保存结构
-            print("\n5. 保存结构...")
+            # 5. Save structure
+            print("\n5. Saving structure...")
             result = await session.call_tool(
                 "save_structure",
                 {
@@ -115,12 +115,12 @@ async def basic_usage_example():
 
             response = json.loads(result.content[0].text)
             if response["success"]:
-                print(f"✓ 结构已保存到: {response['properties']['saved_path']}")
+                print(f"✓ Structure saved to: {response['properties']['saved_path']}")
             else:
-                print(f"✗ 保存失败: {response['message']}")
+                print(f"✗ Save failed: {response['message']}")
 
-            # 6. 列出会话
-            print("\n6. 列出所有会话...")
+            # 6. List sessions
+            print("\n6. Listing all sessions...")
             result = await session.call_tool(
                 "list_sessions",
                 {"limit": 5}
@@ -128,23 +128,23 @@ async def basic_usage_example():
 
             response = json.loads(result.content[0].text)
             if response["success"]:
-                print(f"✓ 找到 {len(response['sessions'])} 个会话")
+                print(f"✓ Found {len(response['sessions'])} sessions")
                 for sess in response["sessions"][:3]:
-                    print(f"  - {sess['id'][:8]}... : {sess.get('metadata', {}).get('name', '未命名')}")
+                    print(f"  - {sess['id'][:8]}... : {sess.get('metadata', {}).get('name', 'Unnamed')}")
 
 
 async def molecule_example():
-    """分子结构示例"""
+    """Molecular structure examples"""
 
     async with stdio_client() as streams:
         async with ClientSession(streams[0], streams[1]) as session:
 
             print("\n" + "="*50)
-            print("分子结构示例")
+            print("Molecular Structure Examples")
             print("="*50)
 
-            # 创建水分子
-            print("创建水分子...")
+            # Create water molecule
+            print("Creating water molecule...")
             result = await session.call_tool(
                 "create_structure",
                 {
@@ -156,10 +156,10 @@ async def molecule_example():
             response = json.loads(result.content[0].text)
             if response["success"]:
                 session_id = response["session_id"]
-                print(f"✓ 水分子创建成功")
-                print(f"  原子数: {response['structure_data']['total_atoms']}")
+                print(f"✓ Water molecule created successfully")
+                print(f"  Number of atoms: {response['structure_data']['total_atoms']}")
 
-                # 获取结构详细信息
+                # Get detailed structure information
                 result = await session.call_tool(
                     "get_structure_info",
                     {"session_id": session_id}
@@ -168,22 +168,22 @@ async def molecule_example():
                 response = json.loads(result.content[0].text)
                 if response["success"]:
                     info = response["structure_info"]
-                    print(f"  键连接数: {info.get('total_bonds', 0)}")
-                    print(f"  最小距离: {info.get('min_distance', 'N/A')} Å")
+                    print(f"  Number of bonds: {info.get('total_bonds', 0)}")
+                    print(f"  Minimum distance: {info.get('min_distance', 'N/A')} Å")
 
 
 async def surface_example():
-    """表面结构示例"""
+    """Surface structure examples"""
 
     async with stdio_client() as streams:
         async with ClientSession(streams[0], streams[1]) as session:
 
             print("\n" + "="*50)
-            print("表面结构示例")
+            print("Surface Structure Examples")
             print("="*50)
 
-            # 创建Cu(111)表面
-            print("创建Cu(111)表面...")
+            # Create Cu(111) surface
+            print("Creating Cu(111) surface...")
             result = await session.call_tool(
                 "create_structure",
                 {
@@ -197,11 +197,11 @@ async def surface_example():
             response = json.loads(result.content[0].text)
             if response["success"]:
                 session_id = response["session_id"]
-                print(f"✓ 表面创建成功")
-                print(f"  原子数: {response['structure_data']['total_atoms']}")
+                print(f"✓ Surface created successfully")
+                print(f"  Number of atoms: {response['structure_data']['total_atoms']}")
 
-                # 创建超胞
-                print("创建2x2超胞...")
+                # Create supercell
+                print("Creating 2x2 supercell...")
                 result = await session.call_tool(
                     "modify_structure",
                     {
@@ -213,19 +213,19 @@ async def surface_example():
 
                 response = json.loads(result.content[0].text)
                 if response["success"]:
-                    print(f"✓ 超胞创建成功")
-                    print(f"  新原子数: {response['structure_data']['total_atoms']}")
+                    print(f"✓ Supercell created successfully")
+                    print(f"  New number of atoms: {response['structure_data']['total_atoms']}")
 
 
 if __name__ == "__main__":
-    print("ASE MCP Server 使用示例")
-    print("请确保MCP服务器正在运行...")
-    print("启动命令: python server/main.py --mcp-only")
+    print("ASE MCP Server Usage Examples")
+    print("Please ensure the MCP server is running...")
+    print("Startup command: python server/main.py --mcp-only")
     print()
 
-    # 运行示例
+    # Run examples
     asyncio.run(basic_usage_example())
     asyncio.run(molecule_example())
     asyncio.run(surface_example())
 
-    print("\n示例完成！")
+    print("\nExamples completed!")

@@ -81,3 +81,71 @@ jspm_packages/
 # Temporary folders
 tmp/
 temp/
+
+# React build
+client/build/
+client/.env.local
+client/.env.development.local
+client/.env.test.local
+client/.env.production.local
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+*.cover
+*.py,cover
+.hypothesis/
+cover/
+
+# Project specific
+data/output/
+data/temp/
+*.cif
+*.xyz
+*.pdb
+*.traj
+sessions/
+structures/
+
+# ASE specific files
+*.db
+*.json.bak
+
+# Redis
+dump.rdb
+redis.log
+
+# Jupyter
+.ipynb_checkpoints
+
+# Python cache
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# Documentation build
+docs/_build/
+docs/build/
+site/
+
+# Environment files
+.env.*
+!.env.example
+
+# Backup files
+*.bak
+*.backup
+*~.backup
+
+# Log files specific to ASE MCP
+/tmp/ase_mcp_*.log
+server/ase_mcp.log
+ase_mcp.log
+
+# Generated configuration files
+mcp_server_config.json.backup

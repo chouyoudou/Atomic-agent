@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-ASE MCP Web服务器
-提供WebSocket实时通信和可选的REST API
+ASE MCP Web Server
+Provides WebSocket real-time communication and optional REST API
 """
 
 import asyncio
@@ -23,13 +23,13 @@ from models.structure import (
 )
 from models.session import SessionSummary
 
-# 配置日志
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class ASEWebServer:
-    """ASE Web服务器类"""
+    """ASE Web Server class"""
 
     def __init__(
         self,
@@ -49,7 +49,7 @@ class ASEWebServer:
         self.serve_static = serve_static
         self.allowed_origins = allowed_origins or ["*"]
 
-        # 使用传入的实例或创建新的
+        # Use provided instances or create new ones
         self.session_manager = session_manager or SessionManager(redis_url)
         self.websocket_server = websocket_server or WebSocketServer(
             self.session_manager, host, websocket_port
@@ -57,40 +57,40 @@ class ASEWebServer:
         self.app = self.create_app()
 
     def create_app(self) -> FastAPI:
-        """创建FastAPI应用"""
+        """Create FastAPI application"""
 
         @asynccontextmanager
         async def lifespan(app: FastAPI):
-            # 启动时初始化
-            # 如果session_manager未初始化，则初始化
+            # Initialize on startup
+            # If session_manager is not initialized, initialize it
             if not hasattr(self.session_manager, 'redis') or self.session_manager.redis is None:
                 await self.session_manager.initialize()
 
-            # 如果WebSocket服务器还未启动，则启动
+            # If WebSocket server is not started yet, start it
             if not self.websocket_server.running:
                 await self.websocket_server.start()
 
-            logger.info("ASE Web服务器启动完成")
+            logger.info("ASE Web server started successfully")
 
             yield
 
-            # 关闭时清理（只在standalone模式下）
+            # Cleanup on shutdown (only in standalone mode)
             if not hasattr(self, '_external_services'):
                 await self.websocket_server.stop()
                 await self.session_manager.close()
-            logger.info("ASE Web服务器关闭完成")
+            logger.info("ASE Web server closed successfully")
 
         app = FastAPI(
             title="ASE MCP Web Server",
-            description="原子模拟环境MCP服务器的Web接口",
+            description="Web interface for the Atomic Simulation Environment MCP Server",
             version="0.1.0",
             lifespan=lifespan
         )
 
-        # CORS配置 - 支持前后端分离
+        # CORS configuration - supports frontend-backend separation
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=self.allowed_origins,  # 可配置的前端域名
+            allow_origins=self.allowed_origins,  # Configurable frontend domains
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             allow_headers=["*"],
@@ -98,25 +98,25 @@ class ASEWebServer:
 
         self.setup_routes(app)
 
-        # 可选的静态文件服务 (仅在serve_static=True时启用)
+        # Optional static file serving (only enabled when serve_static=True)
         if self.serve_static:
             static_path = os.path.join(os.path.dirname(__file__), "../client/build")
             if os.path.exists(static_path):
                 app.mount("/", StaticFiles(directory=static_path, html=True), name="frontend")
-                logger.info(f"静态文件服务已启用: {static_path}")
+                logger.info(f"Static file serving enabled: {static_path}")
             else:
-                logger.warning(f"静态文件目录不存在: {static_path}")
+                logger.warning(f"Static file directory does not exist: {static_path}")
         else:
-            logger.info("静态文件服务已禁用 - 运行在纯API模式")
+            logger.info("Static file serving disabled - running in pure API mode")
 
         return app
 
     def setup_routes(self, app: FastAPI):
-        """设置API路由"""
+        """Setup API routes"""
 
         @app.get("/api")
         async def root():
-            return {"message": "ASE MCP Web服务器运行中"}
+            return {"message": "ASE MCP Web server running"}
 
         @app.get("/debug")
         async def debug_page():
@@ -132,9 +132,9 @@ class ASEWebServer:
 
         @app.get("/health")
         async def health_check():
-            """健康检查"""
+            """Health check"""
             try:
-                # 检查Redis连接
+                # Check Redis connection
                 await self.session_manager.redis.ping()
                 return {"status": "healthy", "redis": "connected"}
             except Exception as e:
@@ -146,7 +146,7 @@ class ASEWebServer:
             offset: int = 0,
             status_filter: Optional[str] = None
         ):
-            """获取会话列表"""
+            """Get session list"""
             try:
                 sessions = await self.session_manager.list_sessions(
                     limit=limit, offset=offset, status_filter=status_filter
@@ -162,18 +162,18 @@ class ASEWebServer:
                     }
                 }
             except Exception as e:
-                logger.error(f"获取会话列表失败: {e}")
+                logger.error(f"Failed to get session list: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
         @app.get("/api/sessions/{session_id}")
         async def get_session(session_id: str):
-            """获取特定会话信息"""
+            """Get specific session information"""
             try:
                 session_data = await self.session_manager.get_session(session_id)
                 if not session_data:
-                    raise HTTPException(status_code=404, detail="会话不存在")
+                    raise HTTPException(status_code=404, detail="Session does not exist")
 
-                # 获取结构数据
+                # Get structure data
                 atoms = await self.session_manager.get_structure(session_id)
                 structure_data = None
                 if atoms:
@@ -187,65 +187,65 @@ class ASEWebServer:
             except HTTPException:
                 raise
             except Exception as e:
-                logger.error(f"获取会话信息失败: {e}")
+                logger.error(f"Failed to get session information: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
         @app.delete("/api/sessions/{session_id}")
         async def delete_session(session_id: str):
-            """删除会话"""
+            """Delete session"""
             try:
                 success = await self.session_manager.delete_session(session_id)
                 if not success:
-                    raise HTTPException(status_code=404, detail="会话不存在")
+                    raise HTTPException(status_code=404, detail="Session does not exist")
 
-                # 通知WebSocket客户端
+                # Notify WebSocket clients
                 await self.websocket_server.get_manager().broadcast_to_session(
                     session_id,
                     {
                         "type": "session_deleted",
-                        "data": {"message": "会话已被删除"}
+                        "data": {"message": "Session has been deleted"}
                     }
                 )
 
-                return {"success": True, "message": "会话已删除"}
+                return {"success": True, "message": "Session deleted"}
             except HTTPException:
                 raise
             except Exception as e:
-                logger.error(f"删除会话失败: {e}")
+                logger.error(f"Failed to delete session: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
         @app.websocket("/ws/{client_id}")
         async def websocket_endpoint(websocket: WebSocket, client_id: str):
-            """WebSocket端点(备用方案，主要WebSocket服务在独立端口)"""
+            """WebSocket endpoint (backup solution, main WebSocket service on separate port)"""
             await websocket.accept()
             manager = self.websocket_server.get_manager()
 
             try:
-                # 注册连接
+                # Register connection
                 await manager.register(websocket, client_id)
 
                 while True:
-                    # 接收消息
+                    # Receive messages
                     data = await websocket.receive_text()
                     await manager.handle_message(client_id, data)
 
             except WebSocketDisconnect:
                 await manager.unregister(client_id)
             except Exception as e:
-                logger.error(f"WebSocket错误: {e}")
+                logger.error(f"WebSocket error: {e}")
                 await manager.unregister(client_id)
 
         @app.post("/api/structures")
         async def create_structure(request: CreateStructureRequest):
-            """直接通过Web API创建结构"""
+            """Create structure directly via Web API"""
             try:
-                # 使用session_manager的ASE引擎创建结构
+                # Use session_manager's ASE engine to create structure
                 ase_engine = self.session_manager.ase_engine
 
                 if request.type == "bulk":
-                    # 为bulk结构添加默认晶格常数
+                    # Add default lattice constant for bulk structure
                     if not hasattr(request, 'lattice_constant') or request.lattice_constant is None:
-                        # 根据材料设置默认晶格常数
+                        # Set default lattice constant based on material
                         default_lattice = {
                             "Cu": 3.61, "Al": 4.05, "Fe": 2.87,
                             "Ni": 3.52, "Au": 4.08, "Ag": 4.09
@@ -270,25 +270,25 @@ class ASEWebServer:
                         size=getattr(request, 'size', [2,2])
                     )
                 else:
-                    raise HTTPException(status_code=400, detail=f"不支持的结构类型: {request.type}")
+                    raise HTTPException(status_code=400, detail=f"Unsupported structure type: {request.type}")
 
-                # 创建新会话
+                # Create new session
                 session_id = await self.session_manager.create_session(
                     metadata={
                         "type": request.type,
                         "formula": request.formula,
-                        "description": f"{request.type}结构: {request.formula}"
+                        "description": f"{request.type} structure: {request.formula}"
                     }
                 )
 
-                # 保存结构到会话
+                # Save structure to session
                 await self.session_manager.set_structure(session_id, atoms)
 
-                # 获取结构信息
+                # Get structure information
                 structure_info = ase_engine.get_structure_info(atoms)
                 structure_data = ase_engine.convert_to_dict(atoms)
 
-                # 通知WebSocket客户端
+                # Notify WebSocket clients
                 await self.websocket_server.get_manager().notify_structure_update(
                     session_id, atoms, {
                         "operation": "create_structure",
@@ -303,64 +303,51 @@ class ASEWebServer:
                     "session_id": session_id,
                     "structure_info": structure_info,
                     "structure_data": structure_data,
-                    "message": f"成功创建{request.type}结构"
+                    "message": f"Successfully created {request.type} structure"
                 }
 
             except Exception as e:
-                logger.error(f"Web API创建结构失败: {e}")
-                raise HTTPException(status_code=500, detail=f"创建结构失败: {str(e)}")
+                logger.error(f"Web API structure creation failed: {e}")
+                raise HTTPException(status_code=500, detail=f"Structure creation failed: {str(e)}")
 
         @app.post("/api/structures/{session_id}/modify")
         async def modify_structure(session_id: str, request: dict):
-            """修改现有结构"""
+            """Modify existing structure"""
             try:
-                # 获取当前结构
+                # Get current structure
                 atoms = await self.session_manager.get_structure(session_id)
                 if not atoms:
-                    raise HTTPException(status_code=404, detail="会话或结构不存在")
+                    raise HTTPException(status_code=404, detail="Session or structure does not exist")
 
-                # 执行修改操作
+                # Execute modification operation
                 operation = request.get("operation")
                 parameters = request.get("parameters", {})
 
                 ase_engine = self.session_manager.ase_engine
 
-                if operation == "rotate":
-                    modified_atoms = ase_engine.modify_structure(
-                        atoms,
-                        operation="rotate",
-                        parameters={
-                            "angle": parameters.get("angle", 90),
-                            "axis": parameters.get("axis", [0, 0, 1])
-                        }
-                    )
-                elif operation == "translate":
-                    modified_atoms = ase_engine.modify_structure(
-                        atoms,
-                        operation="translate",
-                        parameters={
-                            "vector": parameters.get("vector", [1, 0, 0])
-                        }
-                    )
-                elif operation == "scale":
-                    modified_atoms = ase_engine.modify_structure(
-                        atoms,
-                        operation="scale",
-                        parameters={
-                            "factor": parameters.get("factor", 1.1)
-                        }
-                    )
-                else:
-                    raise HTTPException(status_code=400, detail=f"不支持的操作: {operation}")
+                # List of supported operations
+                supported_operations = [
+                    "rotate", "translate", "scale", "supercell", "remove_atoms",
+                    "add_atom", "modify_cell", "modify_positions", "replace_atoms",
+                    "change_species", "duplicate_atoms", "create_vacancy"
+                ]
 
-                # 保存修改后的结构
+                if operation not in supported_operations:
+                    raise HTTPException(status_code=400, detail=f"Unsupported operation: {operation}")
+
+                # Execute modification operation
+                modified_atoms = ase_engine.modify_structure(
+                    atoms, operation, parameters
+                )
+
+                # Save modified structure
                 await self.session_manager.set_structure(session_id, modified_atoms)
 
-                # 获取结构信息
+                # Get structure information
                 structure_info = ase_engine.get_structure_info(modified_atoms)
                 structure_data = ase_engine.convert_to_dict(modified_atoms)
 
-                # 通知WebSocket客户端
+                # Notify WebSocket clients
                 await self.websocket_server.get_manager().notify_structure_update(
                     session_id, modified_atoms, {
                         "operation": operation,
@@ -373,18 +360,18 @@ class ASEWebServer:
                     "success": True,
                     "structure_info": structure_info,
                     "structure_data": structure_data,
-                    "message": f"成功执行{operation}操作"
+                    "message": f"Successfully executed {operation} operation"
                 }
 
             except HTTPException:
                 raise
             except Exception as e:
-                logger.error(f"Web API修改结构失败: {e}")
-                raise HTTPException(status_code=500, detail=f"修改结构失败: {str(e)}")
+                logger.error(f"Web API structure modification failed: {e}")
+                raise HTTPException(status_code=500, detail=f"Structure modification failed: {str(e)}")
 
         @app.get("/api/websocket/info")
         async def websocket_info():
-            """获取WebSocket连接信息"""
+            """Get WebSocket connection information"""
             return {
                 "websocket_url": f"ws://{self.host}:{self.websocket_port}",
                 "active_connections": len(self.websocket_server.get_manager().connections),
@@ -392,7 +379,7 @@ class ASEWebServer:
             }
 
     async def run(self):
-        """运行Web服务器"""
+        """Run Web server"""
         config = uvicorn.Config(
             app=self.app,
             host=self.host,
@@ -406,17 +393,17 @@ class ASEWebServer:
 
 
 def main():
-    """主函数"""
+    """Main function"""
     import sys
     import os
 
-    # 从环境变量获取配置
+    # Get configuration from environment variables
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8000"))
     websocket_port = int(os.getenv("WEBSOCKET_PORT", "8001"))
 
-    # 创建并运行服务器
+    # Create and run server
     server = ASEWebServer(
         redis_url=redis_url,
         host=host,
@@ -427,9 +414,9 @@ def main():
     try:
         asyncio.run(server.run())
     except KeyboardInterrupt:
-        logger.info("Web服务器停止")
+        logger.info("Web server stopped")
     except Exception as e:
-        logger.error(f"Web服务器运行错误: {e}")
+        logger.error(f"Web server runtime error: {e}")
         sys.exit(1)
 
 

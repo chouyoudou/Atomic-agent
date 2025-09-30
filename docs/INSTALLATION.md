@@ -1,6 +1,6 @@
-# ASE MCP Server 安装和部署指南
+# ASE MCP Server Installation and Deployment Guide
 
-## 📋 系统要求
+## 📋 System Requirements
 
 ### 基础要求
 - **Python**: 3.9+ (推荐 3.11)

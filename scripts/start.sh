@@ -1,302 +1,231 @@
 #!/bin/bash
-
-# ASE MCP Server 启动脚本
+# ASE MCP Server Interactive Startup Script
 
 set -e
 
-# 颜色定义
+# Color definitions
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+NC='\033[0m'
 
-# 日志函数
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+print_info() { echo -e "${BLUE}ℹ️  $1${NC}"; }
+print_success() { echo -e "${GREEN}✅ $1${NC}"; }
+print_warning() { echo -e "${YELLOW}⚠️  $1${NC}"; }
+print_error() { echo -e "${RED}❌ $1${NC}"; }
+
+print_header() {
+    echo -e "${PURPLE}"
+    echo "🧬 ASE MCP Server - Atomic Simulation Environment"
+    echo "=================================================="
+    echo -e "${NC}"
 }
 
-log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-# 检查Python版本
-check_python() {
-    log_info "检查Python版本..."
-    if command -v python3 &> /dev/null; then
-        PYTHON_VERSION=$(python3 --version | cut -d' ' -f2)
-        log_success "Python版本: $PYTHON_VERSION"
+check_command() {
+    if command -v $1 >/dev/null 2>&1; then
+        return 0
     else
-        log_error "Python3未安装"
-        exit 1
+        return 1
     fi
 }
 
-# 检查端口是否可用
 check_port() {
     local port=$1
-    local service_name=${2:-"服务"}
-
-    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null ; then
-        log_warning "$service_name 端口 $port 已被占用"
-        read -p "是否杀死占用端口 $port 的进程? (y/n): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            local pids=$(lsof -ti:$port)
-            for pid in $pids; do
-                kill -9 $pid 2>/dev/null && log_success "已杀死进程 $pid"
-            done
-        else
-            log_error "$service_name 无法启动，端口 $port 被占用"
-            return 1
-        fi
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+        return 0
+    else
+        return 1
     fi
+}
+
+kill_port() {
+    local port=$1
+    local pids=$(lsof -ti:$port 2>/dev/null)
+    if [ ! -z "$pids" ]; then
+        print_info "Killing processes on port $port: $pids"
+        kill $pids 2>/dev/null || true
+        sleep 2
+    fi
+}
+
+check_dependencies() {
+    print_info "Checking dependencies..."
+
+    if ! check_command python3 && ! check_command python; then
+        print_error "Python not found, please install Python 3.8+"
+        return 1
+    fi
+
+    python_cmd="python3"
+    if ! check_command python3; then
+        python_cmd="python"
+    fi
+
+    if ! $python_cmd -c "import ase, fastapi, uvicorn" 2>/dev/null; then
+        print_warning "Missing Python dependencies, installing..."
+        pip install -r requirements.txt || {
+            print_error "Failed to install Python dependencies"
+            return 1
+        }
+    fi
+
+    print_success "Dependencies check completed"
     return 0
 }
 
-# 检查Redis连接
-check_redis() {
-    log_info "检查Redis连接..."
-    REDIS_URL=${REDIS_URL:-"redis://localhost:6379"}
+start_services() {
+    local mode=$1
+    print_info "Starting mode: $mode"
 
-    if command -v redis-cli &> /dev/null; then
-        if redis-cli -u "$REDIS_URL" ping &> /dev/null; then
-            log_success "Redis连接正常: $REDIS_URL"
-        else
-            log_warning "Redis连接失败，将尝试启动..."
-            if command -v redis-server &> /dev/null; then
-                redis-server --daemonize yes
-                sleep 2
-                log_success "Redis已启动"
-            else
-                log_warning "Redis未安装，将使用内存模拟模式"
-            fi
+    # Clean up ports
+    for port in 8000 8001 3000; do
+        if check_port $port; then
+            print_warning "Port $port is occupied, cleaning up..."
+            kill_port $port
         fi
-    else
-        log_warning "redis-cli未找到，将使用内存模拟模式"
+    done
+
+    python_cmd="python3"
+    if ! check_command python3; then
+        python_cmd="python"
     fi
-}
-
-# 安装依赖
-install_dependencies() {
-    log_info "安装Python依赖..."
-
-    # 检查虚拟环境
-    if [[ "$VIRTUAL_ENV" == "" ]]; then
-        log_warning "未检测到虚拟环境，建议创建虚拟环境"
-        read -p "是否创建虚拟环境? (y/n): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            python3 -m venv venv
-            source venv/bin/activate
-            log_success "虚拟环境已创建并激活"
-        fi
-    fi
-
-    # 安装Python依赖
-    pip install -r requirements.txt
-    log_success "Python依赖安装完成"
-
-    # 安装前端依赖（如果存在）
-    if [[ -d "client" && -f "client/package.json" ]]; then
-        log_info "安装前端依赖..."
-        cd client
-        npm install
-        cd ..
-        log_success "前端依赖安装完成"
-    fi
-}
-
-# 启动服务
-start_server() {
-    local mode=${1:-"full"}
-
-    log_info "启动ASE MCP服务器..."
-
-    # 设置环境变量
-    export PYTHONPATH="${PYTHONPATH}:$(pwd)"
-    export REDIS_URL=${REDIS_URL:-"redis://localhost:6379"}
-    export WEB_HOST=${WEB_HOST:-"0.0.0.0"}
-    export WEB_PORT=${WEB_PORT:-"8000"}
-    export WEBSOCKET_PORT=${WEBSOCKET_PORT:-"8001"}
 
     case $mode in
-        "mcp-only")
-            log_info "启动MCP服务器（仅MCP模式）"
-            cd server
-            python main.py --mcp-only
+        "separated")
+            print_info "Starting backend API service..."
+            nohup $python_cmd server/main.py --api-only > /tmp/ase_mcp_backend.log 2>&1 &
+            backend_pid=$!
+            print_success "Backend started (PID: $backend_pid)"
+
+            if check_command npm; then
+                print_info "Starting frontend service..."
+                cd client
+                if [ ! -d "node_modules" ]; then
+                    print_info "Installing frontend dependencies..."
+                    npm install
+                fi
+                nohup npm start > /tmp/ase_mcp_frontend.log 2>&1 &
+                frontend_pid=$!
+                cd ..
+                print_success "Frontend started (PID: $frontend_pid)"
+                print_info "Frontend: http://localhost:3000"
+            else
+                print_warning "npm not found, backend only"
+            fi
+            print_info "API: http://localhost:8000/docs"
             ;;
-        "web-only")
-            log_info "启动Web服务器（仅Web模式）"
-            export ENABLE_MCP=false
-            cd server
-            python main.py
+        "integrated")
+            print_info "Starting integrated service..."
+            nohup $python_cmd server/main.py > /tmp/ase_mcp_backend.log 2>&1 &
+            backend_pid=$!
+            print_success "Integrated service started (PID: $backend_pid)"
+            print_info "Access: http://localhost:8000"
             ;;
-        "full")
-            log_info "启动完整服务器（MCP + Web）"
-            cd server
-            python main.py
-            ;;
-        *)
-            log_error "未知的启动模式: $mode"
-            show_help
-            exit 1
+        "api-only")
+            print_info "Starting API-only backend..."
+            nohup $python_cmd server/main.py --api-only > /tmp/ase_mcp_backend.log 2>&1 &
+            backend_pid=$!
+            print_success "API service started (PID: $backend_pid)"
+            print_info "API documentation: http://localhost:8000/docs"
             ;;
     esac
-}
 
-# 构建Docker镜像
-build_docker() {
-    log_info "构建Docker镜像..."
+    print_info "Waiting for services to start..."
+    sleep 5
 
-    # 构建服务器镜像
-    docker build -f Dockerfile.server -t ase-mcp-server .
-    log_success "服务器镜像构建完成"
-
-    # 构建客户端镜像（如果存在）
-    if [[ -f "Dockerfile.client" ]]; then
-        docker build -f Dockerfile.client -t ase-mcp-client .
-        log_success "客户端镜像构建完成"
-    fi
-}
-
-# 启动Docker服务
-start_docker() {
-    log_info "启动Docker服务..."
-
-    if [[ -f "docker-compose.yml" ]]; then
-        docker-compose up -d
-        log_success "Docker服务已启动"
-        log_info "Web界面: http://localhost:3000"
-        log_info "API文档: http://localhost:8000/docs"
-        log_info "WebSocket: ws://localhost:8001"
+    if curl -s http://localhost:8000/health >/dev/null 2>&1; then
+        print_success "Services running normally!"
     else
-        log_error "docker-compose.yml未找到"
-        exit 1
+        print_error "Service startup failed, check logs: tail -f /tmp/ase_mcp_backend.log"
     fi
 }
 
-# 停止Docker服务
-stop_docker() {
-    log_info "停止Docker服务..."
+show_menu() {
+    echo -e "${CYAN}"
+    echo "Please select startup mode:"
+    echo "1) Separated mode (recommended for development)"
+    echo "2) Integrated mode (simple deployment)"
+    echo "3) API-only (no frontend)"
+    echo "4) Run examples"
+    echo "5) Check service status"
+    echo "6) Stop all services"
+    echo "0) Exit"
+    echo -e "${NC}"
+    read -p "Enter choice [0-6]: " choice
+}
 
-    if [[ -f "docker-compose.yml" ]]; then
-        docker-compose down
-        log_success "Docker服务已停止"
+run_examples() {
+    echo -e "${CYAN}"
+    echo "Select example:"
+    echo "1) Structure creation examples"
+    echo "2) Structure modification examples"
+    echo "3) Crystal transformation examples"
+    echo "0) Return"
+    echo -e "${NC}"
+    read -p "Select [0-3]: " example_choice
+
+    case $example_choice in
+        1) python3 examples/api_examples/create_structures.py ;;
+        2) python3 examples/api_examples/modify_structures.py ;;
+        3) python3 examples/api_examples/transform_crystals.py ;;
+        0) return ;;
+        *) print_error "Invalid choice" ;;
+    esac
+
+    read -p "Press Enter to continue..." dummy
+}
+
+check_status() {
+    print_info "Checking service status..."
+
+    if curl -s http://localhost:8000/health >/dev/null 2>&1; then
+        print_success "Backend service running normally (http://localhost:8000)"
     else
-        log_error "docker-compose.yml未找到"
-        exit 1
+        print_warning "Backend service not running"
     fi
-}
 
-# 运行测试
-run_tests() {
-    log_info "运行测试..."
-
-    export PYTHONPATH="${PYTHONPATH}:$(pwd)"
-
-    if command -v pytest &> /dev/null; then
-        pytest tests/ -v
-        log_success "测试完成"
+    if curl -s http://localhost:3000 >/dev/null 2>&1; then
+        print_success "Frontend service running normally (http://localhost:3000)"
     else
-        log_error "pytest未安装"
-        exit 1
+        print_warning "Frontend service not running"
     fi
+
+    read -p "Press Enter to continue..." dummy
 }
 
-# 显示帮助
-show_help() {
-    echo "ASE MCP Server 启动脚本"
-    echo ""
-    echo "用法: $0 [命令] [选项]"
-    echo ""
-    echo "命令:"
-    echo "  install     安装依赖"
-    echo "  start       启动服务器（默认：完整模式）"
-    echo "  mcp-only    启动MCP服务器（仅MCP模式）"
-    echo "  web-only    启动Web服务器（仅Web模式）"
-    echo "  docker-build 构建Docker镜像"
-    echo "  docker-start 启动Docker服务"
-    echo "  docker-stop  停止Docker服务"
-    echo "  test        运行测试"
-    echo "  help        显示此帮助"
-    echo ""
-    echo "环境变量:"
-    echo "  REDIS_URL      Redis连接URL (默认: redis://localhost:6379)"
-    echo "  WEB_HOST       Web服务器地址 (默认: 0.0.0.0)"
-    echo "  WEB_PORT       Web服务器端口 (默认: 8000)"
-    echo "  WEBSOCKET_PORT WebSocket端口 (默认: 8001)"
-    echo ""
-    echo "示例:"
-    echo "  $0 install           # 安装依赖"
-    echo "  $0 start             # 启动完整服务器"
-    echo "  $0 mcp-only          # 仅启动MCP服务器"
-    echo "  $0 docker-start      # 使用Docker启动"
+stop_services() {
+    print_info "Stopping all services..."
+    for port in 8000 8001 3000; do
+        kill_port $port
+    done
+    print_success "All services stopped"
+    read -p "Press Enter to continue..." dummy
 }
 
-# 主逻辑
 main() {
-    local command=${1:-"help"}
+    cd "$(dirname "$0")/.."
+    print_header
 
-    case $command in
-        "install")
-            check_python
-            install_dependencies
-            ;;
-        "start")
-            check_python
-            check_redis
-            check_port ${WEB_PORT:-8000} "Web服务器"
-            check_port ${WEBSOCKET_PORT:-8001} "WebSocket服务器"
-            start_server "full"
-            ;;
-        "mcp-only")
-            check_python
-            check_redis
-            start_server "mcp-only"
-            ;;
-        "web-only")
-            check_python
-            check_redis
-            start_server "web-only"
-            ;;
-        "docker-build")
-            build_docker
-            ;;
-        "docker-start")
-            start_docker
-            ;;
-        "docker-stop")
-            stop_docker
-            ;;
-        "test")
-            check_python
-            run_tests
-            ;;
-        "help"|"-h"|"--help")
-            show_help
-            ;;
-        *)
-            log_error "未知命令: $command"
-            show_help
-            exit 1
-            ;;
-    esac
+    if ! check_dependencies; then
+        exit 1
+    fi
+
+    while true; do
+        show_menu
+        case $choice in
+            1) start_services "separated"; read -p "Press Enter to continue..." dummy ;;
+            2) start_services "integrated"; read -p "Press Enter to continue..." dummy ;;
+            3) start_services "api-only"; read -p "Press Enter to continue..." dummy ;;
+            4) run_examples ;;
+            5) check_status ;;
+            6) stop_services ;;
+            0) print_info "Goodbye!"; exit 0 ;;
+            *) print_error "Invalid choice" ;;
+        esac
+    done
 }
 
-# 检查是否在项目根目录
-if [[ ! -f "requirements.txt" ]]; then
-    log_error "请在项目根目录运行此脚本"
-    exit 1
-fi
-
-# 运行主函数
 main "$@"

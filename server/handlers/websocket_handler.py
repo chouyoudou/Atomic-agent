@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class WebSocketManager:
-    """WebSocket连接管理器"""
+    """WebSocket connection manager"""
 
     def __init__(self, session_manager: SessionManager):
         self.session_manager = session_manager
@@ -25,49 +25,49 @@ class WebSocketManager:
         self.client_sessions: Dict[str, str] = {}  # client_id -> session_id
 
     async def register(self, websocket: WebSocketServerProtocol, client_id: str = None) -> str:
-        """注册新的WebSocket连接"""
+        """Register new WebSocket connection"""
         if not client_id:
             client_id = str(uuid.uuid4())
 
         self.connections[client_id] = websocket
-        logger.info(f"WebSocket客户端连接: {client_id}")
+        logger.info(f"WebSocket client connected: {client_id}")
 
-        # 发送连接确认
+        # Send connection confirmation
         await self.send_to_client(client_id, {
             "type": "connection_established",
             "client_id": client_id,
-            "data": {"message": "WebSocket连接成功"}
+            "data": {"message": "WebSocket connection successful"}
         })
 
         return client_id
 
     async def unregister(self, client_id: str):
-        """注销WebSocket连接"""
+        """Unregister WebSocket connection"""
         if client_id in self.connections:
             del self.connections[client_id]
 
-        # 取消会话订阅
+        # Cancel session subscriptions
         if client_id in self.client_sessions:
             session_id = self.client_sessions[client_id]
             await self.unsubscribe_session(client_id, session_id)
 
-        logger.info(f"WebSocket客户端断开: {client_id}")
+        logger.info(f"WebSocket client disconnected: {client_id}")
 
     async def subscribe_session(self, client_id: str, session_id: str):
-        """订阅会话更新"""
+        """Subscribe to session updates"""
         if session_id not in self.session_subscribers:
             self.session_subscribers[session_id] = set()
 
         self.session_subscribers[session_id].add(client_id)
         self.client_sessions[client_id] = session_id
 
-        logger.info(f"客户端 {client_id} 订阅会话 {session_id}")
+        logger.info(f"Client {client_id} subscribed to session {session_id}")
 
-        # 发送当前会话状态
+        # Send current session status
         await self.send_session_state(client_id, session_id)
 
     async def unsubscribe_session(self, client_id: str, session_id: str):
-        """取消订阅会话"""
+        """Unsubscribe from session"""
         if session_id in self.session_subscribers:
             self.session_subscribers[session_id].discard(client_id)
             if not self.session_subscribers[session_id]:
@@ -76,10 +76,10 @@ class WebSocketManager:
         if client_id in self.client_sessions:
             del self.client_sessions[client_id]
 
-        logger.info(f"客户端 {client_id} 取消订阅会话 {session_id}")
+        logger.info(f"Client {client_id} unsubscribed from session {session_id}")
 
     async def send_to_client(self, client_id: str, message: Dict[str, Any]):
-        """发送消息给特定客户端"""
+        """Send message to specific client"""
         if client_id not in self.connections:
             return False
 
@@ -89,12 +89,12 @@ class WebSocketManager:
             await websocket.send(message_data)
             return True
         except Exception as e:
-            logger.error(f"发送消息给客户端 {client_id} 失败: {e}")
+            logger.error(f"Failed to send message to client {client_id}: {e}")
             await self.unregister(client_id)
             return False
 
     async def broadcast_to_session(self, session_id: str, message: Dict[str, Any]):
-        """向订阅特定会话的所有客户端广播消息"""
+        """Broadcast message to all clients subscribed to specific session"""
         if session_id not in self.session_subscribers:
             return
 
@@ -105,24 +105,24 @@ class WebSocketManager:
             await self.send_to_client(client_id, message)
 
     async def send_session_state(self, client_id: str, session_id: str):
-        """发送会话当前状态"""
+        """Send current session status"""
         try:
             session_data = await self.session_manager.get_session(session_id)
             if not session_data:
                 await self.send_to_client(client_id, {
                     "type": "error",
                     "session_id": session_id,
-                    "data": {"message": f"会话不存在: {session_id}"}
+                    "data": {"message": f"Session does not exist: {session_id}"}
                 })
                 return
 
-            # 获取结构数据
+            # Get structure data
             atoms = await self.session_manager.get_structure(session_id)
             structure_data = None
             if atoms:
                 structure_data = self.ase_engine.convert_to_dict(atoms)
 
-            # 发送完整状态
+            # Send complete status
             await self.send_to_client(client_id, {
                 "type": "session_state",
                 "session_id": session_id,
@@ -134,15 +134,15 @@ class WebSocketManager:
             })
 
         except Exception as e:
-            logger.error(f"发送会话状态失败: {e}")
+            logger.error(f"Failed to send session status: {e}")
             await self.send_to_client(client_id, {
                 "type": "error",
                 "session_id": session_id,
-                "data": {"message": f"获取会话状态失败: {str(e)}"}
+                "data": {"message": f"Failed to get session status: {str(e)}"}
             })
 
     async def notify_structure_update(self, session_id: str, atoms, operation_info: Dict[str, Any]):
-        """通知结构更新"""
+        """Notify structure update"""
         try:
             structure_data = self.ase_engine.convert_to_dict(atoms)
             structure_info = self.ase_engine.get_structure_info(atoms)
@@ -160,10 +160,10 @@ class WebSocketManager:
             await self.broadcast_to_session(session_id, message)
 
         except Exception as e:
-            logger.error(f"通知结构更新失败: {e}")
+            logger.error(f"Failed to notify structure update: {e}")
 
     async def notify_property_update(self, session_id: str, properties: Dict[str, Any]):
-        """通知属性更新"""
+        """Notify property update"""
         try:
             message = {
                 "type": "property_update",
@@ -176,10 +176,10 @@ class WebSocketManager:
             await self.broadcast_to_session(session_id, message)
 
         except Exception as e:
-            logger.error(f"通知属性更新失败: {e}")
+            logger.error(f"Failed to notify property update: {e}")
 
     async def handle_message(self, client_id: str, message: str):
-        """处理客户端消息"""
+        """Handle client messages"""
         try:
             data = json.loads(message)
             message_type = data.get("type")
@@ -191,7 +191,7 @@ class WebSocketManager:
                 else:
                     await self.send_to_client(client_id, {
                         "type": "error",
-                        "data": {"message": "缺少session_id参数"}
+                        "data": {"message": "Missing session_id parameter"}
                     })
 
             elif message_type == "unsubscribe":
@@ -210,23 +210,23 @@ class WebSocketManager:
             else:
                 await self.send_to_client(client_id, {
                     "type": "error",
-                    "data": {"message": f"未知的消息类型: {message_type}"}
+                    "data": {"message": f"Unknown message type: {message_type}"}
                 })
 
         except json.JSONDecodeError:
             await self.send_to_client(client_id, {
                 "type": "error",
-                "data": {"message": "无效的JSON格式"}
+                "data": {"message": "Invalid JSON format"}
             })
         except Exception as e:
-            logger.error(f"处理客户端消息失败: {e}")
+            logger.error(f"Failed to handle client message: {e}")
             await self.send_to_client(client_id, {
                 "type": "error",
-                "data": {"message": f"处理消息失败: {str(e)}"}
+                "data": {"message": f"Failed to process message: {str(e)}"}
             })
 
     async def handle_get_sessions(self, client_id: str, data: Dict[str, Any]):
-        """处理获取会话列表请求"""
+        """Handle get session list request"""
         try:
             limit = data.get("limit", 20)
             offset = data.get("offset", 0)
@@ -249,14 +249,14 @@ class WebSocketManager:
             })
 
         except Exception as e:
-            logger.error(f"获取会话列表失败: {e}")
+            logger.error(f"Failed to get session list: {e}")
             await self.send_to_client(client_id, {
                 "type": "error",
-                "data": {"message": f"获取会话列表失败: {str(e)}"}
+                "data": {"message": f"Failed to get session list: {str(e)}"}
             })
 
     def _json_serializer(self, obj):
-        """JSON序列化器"""
+        """JSON serializer"""
         if hasattr(obj, 'isoformat'):
             return obj.isoformat()
         elif hasattr(obj, 'tolist'):
@@ -265,7 +265,7 @@ class WebSocketManager:
 
 
 class WebSocketServer:
-    """WebSocket服务器"""
+    """WebSocket server"""
 
     def __init__(self, session_manager: SessionManager, host: str = "localhost", port: int = 8001):
         self.host = host
@@ -275,31 +275,31 @@ class WebSocketServer:
         self.running = False
 
     async def handle_client(self, websocket: WebSocketServerProtocol, path: str = None):
-        """处理客户端连接"""
+        """Handle client connection"""
         client_id = None
         try:
-            # 注册客户端
+            # Register client
             client_id = await self.manager.register(websocket)
 
-            # 监听消息
+            # Listen for messages
             async for message in websocket:
                 await self.manager.handle_message(client_id, message)
 
         except websockets.exceptions.ConnectionClosed:
-            logger.info(f"客户端连接关闭: {client_id}")
+            logger.info(f"Client connection closed: {client_id}")
         except Exception as e:
-            logger.error(f"WebSocket连接错误: {e}")
+            logger.error(f"WebSocket connection error: {e}")
         finally:
             if client_id:
                 await self.manager.unregister(client_id)
 
     async def start(self):
-        """启动WebSocket服务器"""
+        """Start WebSocket server"""
         if self.running:
-            logger.info(f"WebSocket服务器已在运行: {self.host}:{self.port}")
+            logger.info(f"WebSocket server already running: {self.host}:{self.port}")
             return
 
-        logger.info(f"启动WebSocket服务器: {self.host}:{self.port}")
+        logger.info(f"Starting WebSocket server: {self.host}:{self.port}")
 
         self.server = await websockets.serve(
             self.handle_client,
@@ -310,36 +310,36 @@ class WebSocketServer:
         )
 
         self.running = True
-        logger.info(f"WebSocket服务器运行在 ws://{self.host}:{self.port}")
+        logger.info(f"WebSocket server running on ws://{self.host}:{self.port}")
 
     async def stop(self):
-        """停止WebSocket服务器"""
+        """Stop WebSocket server"""
         if self.server:
             self.server.close()
             await self.server.wait_closed()
             self.running = False
-            logger.info("WebSocket服务器已停止")
+            logger.info("WebSocket server stopped")
 
     def get_manager(self) -> WebSocketManager:
-        """获取WebSocket管理器"""
+        """Get WebSocket manager"""
         return self.manager
 
 
-# WebSocket通知装饰器
+# WebSocket notification decorator
 def websocket_notify(websocket_manager: WebSocketManager):
-    """WebSocket通知装饰器，用于在会话操作后自动发送通知"""
+    """WebSocket notification decorator for automatically sending notifications after session operations"""
 
     def decorator(func):
         async def wrapper(*args, **kwargs):
             result = await func(*args, **kwargs)
 
-            # 检查是否是会话操作
-            if len(args) >= 2 and isinstance(args[1], str):  # 假设第二个参数是session_id
+            # Check if this is a session operation
+            if len(args) >= 2 and isinstance(args[1], str):  # Assume second parameter is session_id
                 session_id = args[1]
 
                 try:
-                    # 获取当前结构并通知
-                    session_manager = args[0]  # 假设第一个参数是session_manager
+                    # Get current structure and notify
+                    session_manager = args[0]  # Assume first parameter is session_manager
                     atoms = await session_manager.get_structure(session_id)
 
                     if atoms:
@@ -351,7 +351,7 @@ def websocket_notify(websocket_manager: WebSocketManager):
                             session_id, atoms, operation_info
                         )
                 except Exception as e:
-                    logger.error(f"WebSocket通知失败: {e}")
+                    logger.error(f"WebSocket notification failed: {e}")
 
             return result
         return wrapper

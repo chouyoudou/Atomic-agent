@@ -15,7 +15,7 @@ from pathlib import Path
 
 class ASEEngine:
     """
-    ASE核心引擎，封装原子模拟环境的功能
+    ASE Core Engine - Encapsulates Atomic Simulation Environment functionality
     """
 
     def __init__(self):
@@ -32,16 +32,16 @@ class ASEEngine:
         size: Tuple[int, int, int] = (1, 1, 1)
     ) -> Atoms:
         """
-        创建块体晶体结构
+        Create bulk crystal structure
 
         Args:
-            formula: 化学式，如 'Cu', 'NaCl'
-            crystal_structure: 晶体结构类型 'fcc', 'bcc', 'hcp', 'diamond', 'sc'
-            lattice_constant: 晶格常数
-            size: 超胞大小 (nx, ny, nz)
+            formula: Chemical formula, e.g., 'Cu', 'NaCl'
+            crystal_structure: Crystal structure type 'fcc', 'bcc', 'hcp', 'diamond', 'sc'
+            lattice_constant: Lattice constant
+            size: Supercell size (nx, ny, nz)
 
         Returns:
-            Atoms对象
+            Atoms object
         """
         try:
             atoms = bulk(
@@ -57,23 +57,23 @@ class ASEEngine:
             return atoms
 
         except Exception as e:
-            raise ValueError(f"创建块体结构失败: {str(e)}")
+            raise ValueError(f"Failed to create bulk structure: {str(e)}")
 
     def create_molecule_structure(self, name: str) -> Atoms:
         """
-        创建分子结构
+        Create molecular structure
 
         Args:
-            name: 分子名称，如 'H2O', 'CH4', 'C6H6'
+            name: Molecule name, e.g., 'H2O', 'CH4', 'C6H6'
 
         Returns:
-            Atoms对象
+            Atoms object
         """
         try:
             atoms = molecule(name)
             return atoms
         except Exception as e:
-            raise ValueError(f"创建分子结构失败: {str(e)}")
+            raise ValueError(f"Failed to create molecular structure: {str(e)}")
 
     def create_surface_structure(
         self,
@@ -85,18 +85,18 @@ class ASEEngine:
         vacuum: float = 10.0
     ) -> Atoms:
         """
-        创建表面结构
+        Create surface structure
 
         Args:
-            symbol: 元素符号
-            crystal_structure: 晶体结构
-            miller: 米勒指数
-            layers: 层数
-            size: 表面超胞大小
-            vacuum: 真空层厚度
+            symbol: Element symbol
+            crystal_structure: Crystal structure type
+            miller: Miller indices
+            layers: Number of layers
+            size: Surface supercell size
+            vacuum: Vacuum layer thickness
 
         Returns:
-            Atoms对象
+            Atoms object
         """
         try:
             if crystal_structure == 'fcc':
@@ -106,12 +106,12 @@ class ASEEngine:
             elif crystal_structure == 'hcp':
                 atoms = hcp0001(symbol, size=size, layers=layers, vacuum=vacuum)
             else:
-                raise ValueError(f"不支持的表面结构: {crystal_structure}")
+                raise ValueError(f"Unsupported surface structure: {crystal_structure}")
 
             return atoms
 
         except Exception as e:
-            raise ValueError(f"创建表面结构失败: {str(e)}")
+            raise ValueError(f"Failed to create surface structure: {str(e)}")
 
     def modify_structure(
         self,
@@ -120,15 +120,15 @@ class ASEEngine:
         parameters: Dict[str, Any]
     ) -> Atoms:
         """
-        修改原子结构
+        Modify atomic structure
 
         Args:
-            atoms: 输入的原子结构
-            operation: 操作类型
-            parameters: 操作参数
+            atoms: Input atomic structure
+            operation: Operation type
+            parameters: Operation parameters
 
         Returns:
-            修改后的Atoms对象
+            Modified Atoms object
         """
         atoms_copy = atoms.copy()
 
@@ -162,13 +162,71 @@ class ASEEngine:
                 position = parameters.get('position', [0, 0, 0])
                 atoms_copy.append(Atom(symbol, position))
 
+            elif operation == 'modify_cell':
+                new_cell = parameters.get('cell')
+                scale_atoms = parameters.get('scale_atoms', False)
+                if new_cell is not None:
+                    atoms_copy.set_cell(new_cell, scale_atoms=scale_atoms)
+
+            elif operation == 'modify_positions':
+                positions = parameters.get('positions')
+                indices = parameters.get('indices', None)
+                if positions is not None:
+                    if indices is not None:
+                        # Modify positions of specified atoms
+                        atoms_copy.positions[indices] = positions
+                    else:
+                        # Modify positions of all atoms
+                        atoms_copy.set_positions(positions)
+
+            elif operation == 'replace_atoms':
+                # Complete replacement of atomic structure
+                symbols = parameters.get('symbols', [])
+                positions = parameters.get('positions', [])
+                cell = parameters.get('cell', atoms_copy.get_cell())
+
+                if len(symbols) != len(positions):
+                    raise ValueError("Number of symbols and positions do not match")
+
+                atoms_copy = Atoms(symbols=symbols, positions=positions, cell=cell, pbc=True)
+
+            elif operation == 'change_species':
+                # Change atomic species
+                indices = parameters.get('indices', [])
+                new_symbols = parameters.get('symbols', [])
+
+                if len(indices) != len(new_symbols):
+                    raise ValueError("Number of indices and new symbols do not match")
+
+                current_symbols = list(atoms_copy.get_chemical_symbols())
+                for idx, symbol in zip(indices, new_symbols):
+                    current_symbols[idx] = symbol
+                atoms_copy.set_chemical_symbols(current_symbols)
+
+            elif operation == 'duplicate_atoms':
+                # Duplicate specified atoms
+                indices = parameters.get('indices', [])
+                offset = parameters.get('offset', [0, 0, 1])
+
+                for idx in indices:
+                    new_pos = atoms_copy.positions[idx] + np.array(offset)
+                    atoms_copy.append(Atom(atoms_copy[idx].symbol, new_pos))
+
+            elif operation == 'create_vacancy':
+                # Create vacancy (remove atoms but keep cell)
+                indices = parameters.get('indices', [])
+                if indices:
+                    mask = np.ones(len(atoms_copy), dtype=bool)
+                    mask[indices] = False
+                    atoms_copy = atoms_copy[mask]
+
             else:
-                raise ValueError(f"未知的操作类型: {operation}")
+                raise ValueError(f"Unknown operation type: {operation}")
 
             return atoms_copy
 
         except Exception as e:
-            raise ValueError(f"结构修改失败: {str(e)}")
+            raise ValueError(f"Structure modification failed: {str(e)}")
 
     def calculate_properties(
         self,
@@ -177,19 +235,19 @@ class ASEEngine:
         properties: List[str] = ['energy']
     ) -> Dict[str, Any]:
         """
-        计算原子结构的属性
+        Calculate properties of atomic structure
 
         Args:
-            atoms: 原子结构
-            calculator: 计算器类型
-            properties: 要计算的属性列表
+            atoms: Atomic structure
+            calculator: Calculator type
+            properties: List of properties to calculate
 
         Returns:
-            属性字典
+            Properties dictionary
         """
         try:
             if calculator not in self.calculators:
-                raise ValueError(f"不支持的计算器: {calculator}")
+                raise ValueError(f"Unsupported calculator: {calculator}")
 
             calc = self.calculators[calculator]()
             atoms.set_calculator(calc)
@@ -214,7 +272,7 @@ class ASEEngine:
             return results
 
         except Exception as e:
-            raise ValueError(f"属性计算失败: {str(e)}")
+            raise ValueError(f"Property calculation failed: {str(e)}")
 
     def optimize_structure(
         self,
@@ -224,22 +282,22 @@ class ASEEngine:
         steps: int = 100
     ) -> Tuple[Atoms, Dict[str, Any]]:
         """
-        优化原子结构
+        Optimize atomic structure
 
         Args:
-            atoms: 输入结构
-            calculator: 计算器类型
-            fmax: 收敛阈值
-            steps: 最大优化步数
+            atoms: Input structure
+            calculator: Calculator type
+            fmax: Convergence threshold
+            steps: Maximum optimization steps
 
         Returns:
-            优化后的结构和优化信息
+            Optimized structure and optimization info
         """
         try:
             atoms_copy = atoms.copy()
 
             if calculator not in self.calculators:
-                raise ValueError(f"不支持的计算器: {calculator}")
+                raise ValueError(f"Unsupported calculator: {calculator}")
 
             calc = self.calculators[calculator]()
             atoms_copy.set_calculator(calc)
@@ -261,7 +319,7 @@ class ASEEngine:
             return atoms_copy, optimization_info
 
         except Exception as e:
-            raise ValueError(f"结构优化失败: {str(e)}")
+            raise ValueError(f"Structure optimization failed: {str(e)}")
 
     def convert_to_dict(self, atoms: Atoms) -> Dict[str, Any]:
         """
@@ -287,17 +345,17 @@ class ASEEngine:
                 'volume': atoms.get_volume() if atoms.get_pbc().any() else None
             }
         except Exception as e:
-            raise ValueError(f"转换为字典失败: {str(e)}")
+            raise ValueError(f"Conversion to dictionary failed: {str(e)}")
 
     def convert_from_dict(self, data: Dict[str, Any]) -> Atoms:
         """
-        从字典创建Atoms对象
+        Create Atoms object from dictionary
 
         Args:
-            data: 字典数据
+            data: Dictionary data
 
         Returns:
-            Atoms对象
+            Atoms object
         """
         try:
             atoms = Atoms(
@@ -308,7 +366,7 @@ class ASEEngine:
             )
             return atoms
         except Exception as e:
-            raise ValueError(f"从字典创建结构失败: {str(e)}")
+            raise ValueError(f"Failed to create structure from dictionary: {str(e)}")
 
     def save_structure(
         self,
@@ -317,51 +375,51 @@ class ASEEngine:
         format: str = None
     ) -> str:
         """
-        保存结构到文件
+        Save structure to file
 
         Args:
-            atoms: 原子结构
-            filename: 文件名
-            format: 文件格式，如果为None则从文件扩展名推断
+            atoms: Atomic structure
+            filename: File name
+            format: File format, if None, infer from file extension
 
         Returns:
-            保存的文件路径
+            Saved file path
         """
         try:
-            # 确保目录存在
+            # Ensure directory exists
             os.makedirs(os.path.dirname(filename), exist_ok=True)
 
             write(filename, atoms, format=format)
             return filename
 
         except Exception as e:
-            raise ValueError(f"保存结构失败: {str(e)}")
+            raise ValueError(f"Failed to save structure: {str(e)}")
 
     def load_structure(self, filename: str) -> Atoms:
         """
-        从文件加载结构
+        Load structure from file
 
         Args:
-            filename: 文件路径
+            filename: File path
 
         Returns:
-            Atoms对象
+            Atoms object
         """
         try:
             atoms = read(filename)
             return atoms
         except Exception as e:
-            raise ValueError(f"加载结构失败: {str(e)}")
+            raise ValueError(f"Failed to load structure: {str(e)}")
 
     def get_structure_info(self, atoms: Atoms) -> Dict[str, Any]:
         """
-        获取结构的基本信息
+        Get basic information about the structure
 
         Args:
-            atoms: 原子结构
+            atoms: Atomic structure
 
         Returns:
-            结构信息字典
+            Structure information dictionary
         """
         try:
             info = {
@@ -376,7 +434,7 @@ class ASEEngine:
                 'masses': atoms.get_masses().tolist()
             }
 
-            # 计算键长信息
+            # Calculate bond length information
             if len(atoms) > 1:
                 distances = atoms.get_all_distances()
                 non_zero_distances = distances[distances > 0]
@@ -388,4 +446,4 @@ class ASEEngine:
             return info
 
         except Exception as e:
-            raise ValueError(f"获取结构信息失败: {str(e)}")
+            raise ValueError(f"Failed to get structure information: {str(e)}")

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-ASE MCP Server 主启动文件
-集成MCP服务器和WebSocket服务器
+ASE MCP Server Main Startup File
+Integrates MCP server and WebSocket server
 """
 
 import asyncio
@@ -22,7 +22,7 @@ from mcp_server import ASEMCPServer
 from utils.logging_config import setup_default_logging, ase_logger
 from utils.metrics import performance_monitor, metrics_collector, ASEMetrics
 
-# 配置日志
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 class ASEMCPApplication:
-    """ASE MCP应用程序主类"""
+    """ASE MCP Application Main Class"""
 
     def __init__(
         self,
@@ -150,7 +150,7 @@ class ASEMCPApplication:
                 await asyncio.gather(*tasks, return_exceptions=True)
 
         except Exception as e:
-            logger.error(f"应用程序运行错误: {e}")
+            logger.error(f"Application runtime error: {e}")
             raise
         finally:
             await self.shutdown()
@@ -334,7 +334,7 @@ if __name__ == "__main__":
         try:
             asyncio.run(main())
         except KeyboardInterrupt:
-            logger.info("应用程序被用户中断")
+            logger.info("Application interrupted by user")
         except Exception as e:
-            logger.error(f"应用程序运行错误: {e}")
+            logger.error(f"Application runtime error: {e}")
             sys.exit(1)

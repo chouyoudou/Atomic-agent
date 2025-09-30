@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-ASE MCP Server - 原子模拟环境的MCP服务器
-提供ASE功能的MCP工具接口，支持晶体结构的生成、修改和分析
+ASE MCP Server - MCP Server for Atomic Simulation Environment
+Provides MCP tool interface for ASE functionality, supporting generation, modification and analysis of crystal structures
 """
 
 import asyncio
@@ -34,12 +34,12 @@ from models.structure import (
     ErrorResponse
 )
 
-# 配置日志
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class ASEMCPServer:
-    """ASE MCP服务器类"""
+    """ASE MCP Server class"""
 
     def __init__(self, redis_url: str = "redis://localhost:6379"):
         self.server = Server("ase-mcp-server")
