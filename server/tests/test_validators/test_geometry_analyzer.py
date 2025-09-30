@@ -80,7 +80,7 @@ class TestGeometryAnalyzer:
         check = result["constraints_check"]
 
         assert len(check["passed"]) > 0
-        assert check["passed"][0]["constraint"] == "dimensionality"
+        assert check["passed"][0]["type"] == "dimensionality"
 
     def test_constraint_checking_coordination(self, analyzer, fcc_cu):
         constraints = {"coordination": {"Cu": 12}}
@@ -94,9 +94,10 @@ class TestGeometryAnalyzer:
         result = analyzer.analyze_structure(fcc_cu, constraints=constraints)
 
         check = result["constraints_check"]
-        assert len(check["failed"]) > 0
-        assert check["failed"][0]["expected"] == 2
-        assert check["failed"][0]["actual"] == 3
+        # New format: violations instead of failed
+        assert len(check["violations"]) > 0
+        assert check["violations"][0]["type"] == "dimensionality"
+        assert "2D" in check["violations"][0]["detail"] and "3D" in check["violations"][0]["detail"]
 
     def test_structure_comparison(self, analyzer, fcc_cu):
         atoms_before = fcc_cu.copy()

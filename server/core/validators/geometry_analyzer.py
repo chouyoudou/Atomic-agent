@@ -5,6 +5,7 @@ from pymatgen.core import Structure
 from pymatgen.io.ase import AseAtomsAdaptor
 from robocrys import StructureCondenser
 from robocrys.condense.site import SiteAnalyzer
+from .constraint_validator import ConstraintValidator
 
 
 class GeometryAnalyzer:
@@ -59,7 +60,7 @@ class GeometryAnalyzer:
             "hints": self._generate_hints(condensed, structure),
         }
 
-        if constraints:
+        if constraints is not None:
             result["constraints_check"] = self._check_constraints(
                 condensed, structure, constraints
             )
@@ -91,10 +92,14 @@ class GeometryAnalyzer:
             element_str = site_data["element"]
             element_clean = self._strip_oxidation_state(element_str)
 
+            geometry_likeness = geometry_data.get("likeness", 0) if isinstance(geometry_data, dict) else 0
+
             site_obs = {
+                "site_index": site_index,
                 "element": element_clean,
                 "element_with_oxidation": element_str,
                 "geometry": geometry_type,
+                "geometry_likeness": float(geometry_likeness),
                 "coordination": coordination,
                 "neighbors": nn_list,
                 "bond_lengths": self._extract_bond_lengths(site_index, distances),
@@ -196,67 +201,20 @@ class GeometryAnalyzer:
         structure: Structure,
         constraints: Dict[str, Any],
     ) -> Dict[str, Any]:
-        """Check user-defined constraints."""
-        results = {"passed": [], "failed": [], "warnings": []}
+        """Check user-defined constraints using ConstraintValidator."""
+        observations = self._extract_observations(condensed, structure)
 
-        if "dimensionality" in constraints:
-            expected = constraints["dimensionality"]
-            actual = condensed.get("dimensionality")
-            if expected == actual:
-                results["passed"].append(
-                    {
-                        "constraint": "dimensionality",
-                        "expected": expected,
-                        "actual": actual,
-                    }
-                )
-            else:
-                results["failed"].append(
-                    {
-                        "constraint": "dimensionality",
-                        "expected": expected,
-                        "actual": actual,
-                        "message": f"Structure is {actual}D, expected {expected}D",
-                    }
-                )
+        distances = condensed.get("distances", {})
+        angles = condensed.get("angles", {})
 
-        if "coordination" in constraints:
-            self._check_coordination_constraints(
-                constraints["coordination"], condensed, results
-            )
+        validator = ConstraintValidator(constraints)
+        results = validator.validate(
+            observations=observations,
+            structure_distances=distances,
+            structure_angles=angles
+        )
 
         return results
-
-    def _check_coordination_constraints(
-        self, coord_constraints: Dict[str, Any], condensed: Dict[str, Any], results: Dict
-    ):
-        """Check coordination number constraints."""
-        sites_dict = condensed.get("sites", {})
-        for site_index, site_data in sites_dict.items():
-            element_str = site_data["element"]
-            element = self._strip_oxidation_state(element_str)
-            nn_list = site_data.get("nn", [])
-            actual_coord = len(nn_list) if isinstance(nn_list, list) else 0
-
-            if element in coord_constraints:
-                expected = coord_constraints[element]
-                if actual_coord == expected:
-                    results["passed"].append(
-                        {
-                            "constraint": f"{element}_coordination",
-                            "expected": expected,
-                            "actual": actual_coord,
-                        }
-                    )
-                else:
-                    results["failed"].append(
-                        {
-                            "constraint": f"{element}_coordination",
-                            "expected": expected,
-                            "actual": actual_coord,
-                            "message": f"{element} has {actual_coord} neighbors, expected {expected}",
-                        }
-                    )
 
     def compare_structures(
         self, atoms_before: Atoms, atoms_after: Atoms
