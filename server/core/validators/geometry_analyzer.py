@@ -17,6 +17,12 @@ class GeometryAnalyzer:
         self.condenser = StructureCondenser()
         self.adaptor = AseAtomsAdaptor()
 
+    @staticmethod
+    def _strip_oxidation_state(element_str: str) -> str:
+        """Remove oxidation state from element string (e.g., 'Cu0+' -> 'Cu')"""
+        import re
+        return re.sub(r'[\d\+\-]+$', '', element_str)
+
     def analyze_structure(
         self, atoms: Atoms, constraints: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
@@ -34,6 +40,11 @@ class GeometryAnalyzer:
                 "constraints_check": {...}  # If constraints provided
             }
         """
+        if atoms.cell.volume < 0.1:
+            atoms = atoms.copy()
+            atoms.center(vacuum=10.0)
+            atoms.set_pbc(True)
+
         structure = self.adaptor.get_structure(atoms)
 
         try:
@@ -67,26 +78,43 @@ class GeometryAnalyzer:
             "sites": [],
         }
 
-        for site_data in condensed.get("sites", []):
+        distances = condensed.get("distances", {})
+        sites_dict = condensed.get("sites", {})
+
+        for site_index, site_data in sites_dict.items():
+            nn_list = site_data.get("nn", [])
+            coordination = len(nn_list) if isinstance(nn_list, list) else 0
+
+            geometry_data = site_data.get("geometry", {})
+            geometry_type = geometry_data.get("type") if isinstance(geometry_data, dict) else None
+
+            element_str = site_data["element"]
+            element_clean = self._strip_oxidation_state(element_str)
+
             site_obs = {
-                "element": site_data["element"],
-                "geometry": site_data.get("geometry", {}).get("type"),
-                "coordination": site_data.get("nnn", 0),
-                "neighbors": site_data.get("nn", {}).get("sites", []),
-                "bond_lengths": self._extract_bond_lengths(site_data),
+                "element": element_clean,
+                "element_with_oxidation": element_str,
+                "geometry": geometry_type,
+                "coordination": coordination,
+                "neighbors": nn_list,
+                "bond_lengths": self._extract_bond_lengths(site_index, distances),
             }
             observations["sites"].append(site_obs)
 
         return observations
 
-    def _extract_bond_lengths(self, site_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract bond length statistics from site data."""
-        nn_data = site_data.get("nn", {})
-        bond_lengths = []
+    def _extract_bond_lengths(
+        self, site_index: int, distances: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Extract bond length statistics from distances dict."""
+        site_distances = distances.get(site_index, {})
+        if not isinstance(site_distances, dict):
+            return {}
 
-        for neighbor_info in nn_data.get("sites", []):
-            if "dist" in neighbor_info:
-                bond_lengths.append(neighbor_info["dist"])
+        bond_lengths = []
+        for neighbor_index, dist_list in site_distances.items():
+            if isinstance(dist_list, list):
+                bond_lengths.extend(dist_list)
 
         if not bond_lengths:
             return {}
@@ -96,6 +124,7 @@ class GeometryAnalyzer:
             "std_dev": float(np.std(bond_lengths)),
             "min": float(np.min(bond_lengths)),
             "max": float(np.max(bond_lengths)),
+            "count": len(bond_lengths),
             "values": [float(x) for x in bond_lengths],
         }
 
@@ -105,7 +134,8 @@ class GeometryAnalyzer:
         """Generate interpretive geometric hints."""
         hints = []
 
-        for site_data in condensed.get("sites", []):
+        sites_dict = condensed.get("sites", {})
+        for site_index, site_data in sites_dict.items():
             site_hints = self._analyze_site_geometry(site_data, structure)
             if site_hints:
                 hints.extend(site_hints)
@@ -118,10 +148,14 @@ class GeometryAnalyzer:
         """Analyze individual site geometry for hints."""
         hints = []
         geometry_data = site_data.get("geometry", {})
+        if not isinstance(geometry_data, dict):
+            return hints
+
         geometry_type = geometry_data.get("type")
         likeness = geometry_data.get("likeness", 0)
 
-        coordination = site_data.get("nnn", 0)
+        nn_list = site_data.get("nn", [])
+        coordination = len(nn_list) if isinstance(nn_list, list) else 0
         element = site_data["element"]
 
         if coordination == 5 and likeness < 0.8:
@@ -197,9 +231,12 @@ class GeometryAnalyzer:
         self, coord_constraints: Dict[str, Any], condensed: Dict[str, Any], results: Dict
     ):
         """Check coordination number constraints."""
-        for site_data in condensed.get("sites", []):
-            element = site_data["element"]
-            actual_coord = site_data.get("nnn", 0)
+        sites_dict = condensed.get("sites", {})
+        for site_index, site_data in sites_dict.items():
+            element_str = site_data["element"]
+            element = self._strip_oxidation_state(element_str)
+            nn_list = site_data.get("nn", [])
+            actual_coord = len(nn_list) if isinstance(nn_list, list) else 0
 
             if element in coord_constraints:
                 expected = coord_constraints[element]

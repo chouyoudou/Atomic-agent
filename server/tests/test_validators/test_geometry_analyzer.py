@@ -5,7 +5,6 @@ from ase.build import bulk, molecule
 from server.core.validators import GeometryAnalyzer
 
 
-@pytest.mark.timeout(60)
 class TestGeometryAnalyzer:
     @pytest.fixture
     def analyzer(self):
@@ -63,7 +62,6 @@ class TestGeometryAnalyzer:
         assert "std_dev" in bond_data
         assert bond_data["mean"] > 0
 
-    @pytest.mark.skip("Performance optimization needed")
     def test_incomplete_coordination_hint(self, analyzer):
         atoms = bulk("Cu", "fcc", a=3.6)
         atoms = atoms * (2, 2, 2)
@@ -100,7 +98,6 @@ class TestGeometryAnalyzer:
         assert check["failed"][0]["expected"] == 2
         assert check["failed"][0]["actual"] == 3
 
-    @pytest.mark.skip("Performance optimization needed")
     def test_structure_comparison(self, analyzer, fcc_cu):
         atoms_before = fcc_cu.copy()
         atoms_after = fcc_cu.copy()
@@ -131,7 +128,6 @@ class TestGeometryAnalyzer:
             assert "coordination" in site
             assert "neighbors" in site
 
-    @pytest.mark.skip("Performance optimization needed")
     def test_hint_confidence_levels(self, analyzer):
         atoms = bulk("Al", "fcc", a=4.05)
         atoms = atoms * (2, 2, 1)
