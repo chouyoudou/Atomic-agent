@@ -8,6 +8,97 @@ This checklist tracks the implementation of a **geometric analysis tool** that p
 
 ---
 
+## Implementation Standards
+
+### 1. Code Reuse Strategy
+**Priority**: Maximize use of existing robocrystallographer functionality
+
+Based on robocrystallographer.pdf analysis, the following components are available:
+
+| Feature Category | Robocrys Component | Our Usage Strategy |
+|-----------------|-------------------|-------------------|
+| **Dimensionality (0D/1D/2D/3D)** | `get_structure_components()` | Direct use via inheritance |
+| **Coordination numbers** | `SiteAnalyzer` + `CrystalNN` | Inherit and extend |
+| **Local geometry** | `SiteAnalyzer.get_geometry()` | Use directly, add RMSD calculations |
+| **Polyhedra connectivity** | Next-neighbor analysis | Inherit logic, add quantification |
+| **Bond lengths/angles** | Built-in bond analysis | Use directly |
+| **Oxidation states** | `add_oxidation_state_by_guess()` | Use when available |
+| **Space group/symmetry** | `SpacegroupAnalyzer` | Direct use |
+| **Mineral prototype** | `MineralMatcher` | Optional enhancement |
+
+**Implementation approach:**
+- Inherit from robocrys classes where possible
+- Extend (don't modify) robocrystallographer source code
+- Add quantification layer (RMSD, deviation %) on top of robocrys analysis
+- Create thin wrapper classes in `server/core/validators/`
+
+### 2. Code Style Standards
+**Style**: Production-ready release quality
+
+- **Language**: English only (code, comments, docstrings)
+- **Comments**: Minimal - code should be self-documenting
+- **Naming**: Clear, concise variable/function names
+- **Docstrings**: Brief, essential information only
+- **Format**: Follow PEP 8, use type hints
+- **Structure**: Clean separation of concerns
+
+**Good example:**
+```python
+def calculate_rmsd_from_ideal(positions: np.ndarray, ideal_geometry: str) -> float:
+    ideal_positions = IDEAL_GEOMETRIES[ideal_geometry]
+    aligned = kabsch_align(positions, ideal_positions)
+    return np.sqrt(np.mean((aligned - ideal_positions)**2))
+```
+
+**Bad example:**
+```python
+def calculate_rmsd_from_ideal(positions: np.ndarray, ideal_geometry: str) -> float:
+    # First we need to get the ideal positions for this geometry type
+    # This is stored in our IDEAL_GEOMETRIES constant dictionary
+    ideal_positions = IDEAL_GEOMETRIES[ideal_geometry]
+
+    # Now we align the actual positions to the ideal using Kabsch algorithm
+    # This removes rotation/translation differences
+    aligned = kabsch_align(positions, ideal_positions)
+
+    # Finally calculate root mean square deviation
+    # Lower RMSD means closer to ideal geometry
+    return np.sqrt(np.mean((aligned - ideal_positions)**2))
+```
+
+### 3. Test-Driven Requirements
+**Acceptance criteria**: Tests must pass before marking task complete
+
+- Write tests before or during implementation
+- Each component needs unit tests with expected inputs/outputs
+- Include corner cases explicitly
+- Test coverage target: >90%
+- Tests must be deterministic and reproducible
+
+### 4. Robocrystallographer Integration Points
+
+Key classes to inherit/use:
+
+```python
+from robocrys import StructureCondenser, StructureDescriber
+from robocrys.condense.site import SiteAnalyzer
+from robocrys.condense.mineral import MineralMatcher
+from pymatgen.analysis.local_env import CrystalNN
+
+class GeometryAnalyzer(StructureCondenser):
+    """Extends robocrys with quantitative deviation metrics"""
+
+    def analyze_with_hints(self, structure):
+        # Use parent class for basic analysis
+        condensed = self.condense_structure(structure)
+
+        # Add our quantification layer
+        hints = self._generate_geometric_hints(condensed)
+        return {"observations": condensed, "hints": hints}
+```
+
+---
+
 ## Implementation Phases
 
 ### Phase 0: Foundation (Weeks 1-2)
