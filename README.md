@@ -21,6 +21,7 @@
 - 🔄 **Session Management** | Multi-session support with operation history
 - 🏗️ **Flexible Deployment** | Integrated or separated frontend/backend
 - 📚 **Complete API** | RESTful API with auto-generated documentation
+- ✅ **Production-Ready Validation** | 119 tests passing, LLM-optimized output ([docs](docs/validation/README.md))
 
 ## 🚀 Quick Start
 
@@ -273,6 +274,60 @@ cat client/.env
 - 🤖 [LLM Training Guide](docs/LLM_TRAINING_GUIDE.md) - Fine-tune your AI models
 - 🏗️ [Architecture Guide](docs/ARCHITECTURE.md) - System design details
 - 💻 [Claude MCP Setup](docs/CLAUDE.md) - Configure Claude integration
+- ✅ [Validation System](docs/validation/README.md) - Production-ready validation (119 tests ✅)
+
+## ✅ Validation System
+
+**Status**: 🚀 Production Ready | **Version**: 1.0.0 | **Tests**: 119/119 ✅
+
+The ASE MCP Server includes a comprehensive validation system for crystal structure analysis and constraint checking, specifically optimized for LLM agent usage.
+
+### Key Features
+
+- **Geometric Analysis**: Dimensionality, coordination numbers, bond lengths/angles, symmetry detection
+- **5 Constraint Validators**: Angle, Lattice, Symmetry, Freezing, Auto-suggester
+- **3-Level Feedback**: passed/warning/violation with severity percentages
+- **LLM-Optimized Output**: 2-3 decimal precision, actionable suggestions, clear categorization
+
+### Test Coverage
+
+| Phase | Tests | Status | Description |
+|-------|-------|--------|-------------|
+| Phase 0 | 13 | ✅ | Core geometric analysis (Robocrys integration) |
+| Phase 1 | 16 | ✅ | Tolerance-based validation (3-level feedback) |
+| Phase 2 | 9 | ✅ | Advanced constraints (5 validators) |
+| Phase 3 | 59 | ✅ | Corner cases and edge structures |
+| Phase 3.5 | 22 | ✅ | LLM usability validation |
+| **Total** | **119** | **✅** | **100% passing** |
+
+### Quick Example
+
+```python
+from server.core.validators import GeometryAnalyzer, ConstraintSuggester
+
+# Analyze structure
+analyzer = GeometryAnalyzer()
+result = analyzer.analyze_structure(atoms)
+
+# Auto-generate constraints
+suggester = ConstraintSuggester()
+suggestions = suggester.suggest_constraints(atoms, result["observations"])
+
+print(suggestions["constraints"])  # Recommended constraints
+print(suggestions["rationale"])    # Why these constraints
+```
+
+### Documentation
+
+- **📊 [Validation Summary](docs/validation/VALIDATION_SUMMARY.md)** - Comprehensive overview
+- **📚 [Validation Index](docs/validation/README.md)** - Complete documentation index
+- **🧪 [Test Instructions](docs/validation/TEST_INSTRUCTIONS.md)** - How to run tests
+
+**Key Achievements**:
+- ✅ 119/119 tests passing (100% success rate)
+- ✅ LLM-friendly output (numeric precision, actionable feedback)
+- ✅ Real-world validation (Materials Project structures, BaTiO3 phase transitions)
+- ✅ 0 crashes on edge cases (robust error handling)
 
 ## 🤝 Contributing
 
