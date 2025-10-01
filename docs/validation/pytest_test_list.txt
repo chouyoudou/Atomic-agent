@@ -1,0 +1,46 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.11.13, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/zhangyt/Desktop/src/ASE_MCP
+plugins: asyncio-1.2.0, anyio-4.11.0, typeguard-4.4.4
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 29 items
+
+<Dir ASE_MCP>
+  <Dir server>
+    <Dir tests>
+      <Dir test_validators>
+        <Module test_constraints.py>
+          <Class TestConstraintValidator>
+            <Function test_coordination_exact_match>
+            <Function test_coordination_mismatch>
+            <Function test_dimensionality_match>
+            <Function test_dimensionality_mismatch>
+            <Function test_bond_length_within_tolerance>
+            <Function test_bond_length_slight_deviation_warning>
+            <Function test_bond_length_major_violation>
+            <Function test_geometry_likeness_pass>
+            <Function test_geometry_likeness_insufficient>
+            <Function test_geometry_type_mismatch>
+            <Function test_multiple_constraints>
+            <Function test_empty_constraints>
+            <Function test_tolerance_boundary_min>
+            <Function test_tolerance_boundary_max>
+            <Function test_deviation_calculation>
+            <Function test_suggestion_generation>
+        <Module test_geometry_analyzer.py>
+          <Class TestGeometryAnalyzer>
+            <Function test_analyzer_initialization>
+            <Function test_analyze_fcc_structure>
+            <Function test_coordination_in_fcc>
+            <Function test_molecule_dimensionality>
+            <Function test_bond_length_statistics>
+            <Function test_incomplete_coordination_hint>
+            <Function test_constraint_checking_dimensionality>
+            <Function test_constraint_checking_coordination>
+            <Function test_constraint_failure>
+            <Function test_structure_comparison>
+            <Function test_observations_extraction>
+            <Function test_site_geometry_analysis>
+            <Function test_hint_confidence_levels>
+
+========================= 29 tests collected in 14.97s =========================

@@ -1,0 +1,60 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.11.13, pytest-8.4.2, pluggy-1.6.0 -- /Users/zhangyt/miniforge3/envs/vasp/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /Users/zhangyt/Desktop/src/ASE_MCP
+plugins: asyncio-1.2.0, anyio-4.11.0, typeguard-4.4.4
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 29 items
+
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_coordination_exact_match PASSED [  3%]
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_coordination_mismatch PASSED [  6%]
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_dimensionality_match PASSED [ 10%]
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_dimensionality_mismatch PASSED [ 13%]
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_bond_length_within_tolerance PASSED [ 17%]
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_bond_length_slight_deviation_warning PASSED [ 20%]
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_bond_length_major_violation PASSED [ 24%]
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_geometry_likeness_pass PASSED [ 27%]
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_geometry_likeness_insufficient PASSED [ 31%]
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_geometry_type_mismatch PASSED [ 34%]
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_multiple_constraints PASSED [ 37%]
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_empty_constraints PASSED [ 41%]
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_tolerance_boundary_min PASSED [ 44%]
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_tolerance_boundary_max PASSED [ 48%]
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_deviation_calculation PASSED [ 51%]
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_suggestion_generation PASSED [ 55%]
+server/tests/test_validators/test_geometry_analyzer.py::TestGeometryAnalyzer::test_analyzer_initialization PASSED [ 58%]
+server/tests/test_validators/test_geometry_analyzer.py::TestGeometryAnalyzer::test_analyze_fcc_structure PASSED [ 62%]
+server/tests/test_validators/test_geometry_analyzer.py::TestGeometryAnalyzer::test_coordination_in_fcc PASSED [ 65%]
+server/tests/test_validators/test_geometry_analyzer.py::TestGeometryAnalyzer::test_molecule_dimensionality PASSED [ 68%]
+server/tests/test_validators/test_geometry_analyzer.py::TestGeometryAnalyzer::test_bond_length_statistics PASSED [ 72%]
+server/tests/test_validators/test_geometry_analyzer.py::TestGeometryAnalyzer::test_incomplete_coordination_hint PASSED [ 75%]
+server/tests/test_validators/test_geometry_analyzer.py::TestGeometryAnalyzer::test_constraint_checking_dimensionality PASSED [ 79%]
+server/tests/test_validators/test_geometry_analyzer.py::TestGeometryAnalyzer::test_constraint_checking_coordination PASSED [ 82%]
+server/tests/test_validators/test_geometry_analyzer.py::TestGeometryAnalyzer::test_constraint_failure PASSED [ 86%]
+server/tests/test_validators/test_geometry_analyzer.py::TestGeometryAnalyzer::test_structure_comparison PASSED [ 89%]
+server/tests/test_validators/test_geometry_analyzer.py::TestGeometryAnalyzer::test_observations_extraction PASSED [ 93%]
+server/tests/test_validators/test_geometry_analyzer.py::TestGeometryAnalyzer::test_site_geometry_analysis PASSED [ 96%]
+server/tests/test_validators/test_geometry_analyzer.py::TestGeometryAnalyzer::test_hint_confidence_levels PASSED [100%]
+
+=============================== warnings summary ===============================
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_coordination_mismatch
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_dimensionality_mismatch
+server/tests/test_validators/test_geometry_analyzer.py::TestGeometryAnalyzer::test_molecule_dimensionality
+server/tests/test_validators/test_geometry_analyzer.py::TestGeometryAnalyzer::test_bond_length_statistics
+  /Users/zhangyt/miniforge3/envs/vasp/lib/python3.11/site-packages/pymatgen/analysis/local_env.py:3935: UserWarning: CrystalNN: cannot locate an appropriate radius, covalent or atomic radii will be used, this can lead to non-optimal results.
+    nn_data = self.get_nn_data(structure, n)
+
+server/tests/test_validators/test_constraints.py: 6 warnings
+server/tests/test_validators/test_geometry_analyzer.py: 6 warnings
+  /Users/zhangyt/miniforge3/envs/vasp/lib/python3.11/site-packages/matminer/featurizers/site/fingerprint.py:450: UserWarning: CrystalNN: cannot locate an appropriate radius, covalent or atomic radii will be used, this can lead to non-optimal results.
+    nndata = self.cnn.get_nn_data(struct, idx)
+
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_coordination_mismatch
+server/tests/test_validators/test_constraints.py::TestConstraintValidator::test_dimensionality_mismatch
+server/tests/test_validators/test_geometry_analyzer.py::TestGeometryAnalyzer::test_molecule_dimensionality
+server/tests/test_validators/test_geometry_analyzer.py::TestGeometryAnalyzer::test_bond_length_statistics
+  /Users/zhangyt/miniforge3/envs/vasp/lib/python3.11/site-packages/robocrys/condense/molecule.py:127: RuntimeWarning: Molecule naming requires openbabel to be installed with Python bindings. Please get it at http://openbabel.org.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================= 29 passed, 20 warnings in 149.95s (0:02:29) ==================

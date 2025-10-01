@@ -110,6 +110,18 @@ data/temp/
 sessions/
 structures/
 
+# API keys and credentials
+mp_api
+*.api_key
+credentials*.json
+
+# Materials Project downloaded structures
+examples/validation_examples/mp_structures/
+
+# Test reports (except official documentation)
+test_report*.txt
+pytest_report*.txt
+
 # ASE specific files
 *.db
 *.json.bak
