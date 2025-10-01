@@ -1,10 +1,18 @@
 """Complex Structure Validation Tests using Materials Project Data
 
-Tests validation system with real complex structures:
+⚠️ INCOMPLETE - Preserved for reference only
+
+This script was designed to test validation on multiple complex structures:
 1. Perovskites (e.g., BaTiO3) - octahedral coordination
 2. Spinels (e.g., MgAl2O4) - mixed tetrahedral/octahedral
 3. Layered structures (e.g., graphite-like)
 4. Perturbation tests (bond stretching, angle distortion, atom displacement)
+
+Status: Concept demonstration, not fully functional
+- Requires supercell analysis (very slow: 60-180s per structure)
+- Use test_mp_structures.py or final_validation_tests.py instead
+
+Preserved for reference to show original design intent.
 """
 
 import sys

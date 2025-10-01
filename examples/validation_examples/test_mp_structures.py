@@ -1,4 +1,22 @@
-"""Test validation on real Materials Project structures with perturbations."""
+"""Test validation on real Materials Project structures with perturbations.
+
+⚠️ EXPERIMENTAL - Runtime: ~5-10 minutes
+
+This script downloads complex structures from Materials Project and tests
+validation robustness through bond stretching and random displacements.
+
+Performance characteristics:
+- Each robocrys analysis: 10-30 seconds
+- Multiple perturbation tests per structure
+- Total runtime: 5-10 minutes (expected, not a bug)
+
+Usage:
+    python examples/validation_examples/test_mp_structures.py
+
+Requirements:
+    - Materials Project API key in 'mp_api' file
+    - mp_structures/ directory with cached structures
+"""
 
 import sys
 sys.path.insert(0, '.')

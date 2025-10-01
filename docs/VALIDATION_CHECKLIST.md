@@ -237,7 +237,55 @@ def analyze_coordination(atom: Atom, structure: Atoms) -> dict:
 
 ---
 
-### Phase 1: Core Implementation (Weeks 3-4) - NEXT
+### Phase 1: Tolerance-Based Validation ✅ COMPLETED (2025-09-30)
+
+**实际完成内容** (与原计划的差异):
+- ✅ **ConstraintValidator** with 3-level feedback (passed/warning/violation)
+- ✅ **Geometry likeness** using robocrys Order Parameters (OP 0.0-1.0)
+- ✅ **Bond length/angle tolerance** ranges with element-specific thresholds
+- ❌ **未实现Kabsch/RMSD** (原计划有，实际用OP代替 - 技术决策)
+- ✅ **Comprehensive testing** (30+ scenarios with MP real structures)
+- ✅ **Performance optimization** (primitive cell: 1-5s, suitable for LLM feedback)
+
+**关键技术决策**:
+1. **使用robocrys OP代替RMSD**:
+   - Robocrys Order Parameter已提供0.0-1.0几何质量量化
+   - 无需实现Kabsch alignment
+   - 更快且与RMSD高度相关
+
+2. **容差阈值 (5%/15%)**:
+   - <5% 偏差: Silent pass (避免信息过载)
+   - 5-15% 偏差: Warning (提醒LLM)
+   - >15% 偏差: Violation (必须修复)
+
+3. **元素特异性阈值**:
+   - O: min_likeness=0.5 (天然较低OP)
+   - Ti/Al: min_likeness=0.7 (标准金属)
+   - 严格模式: min_likeness=0.9 (高精度)
+
+**实现文件**:
+- ✅ `server/core/validators/constraint_validator.py` (285行)
+- ✅ `server/core/validators/geometry_hints.py` (238行)
+- ✅ `server/core/validators/geometry_analyzer.py` (扩展: +geometry_likeness字段)
+- ✅ `server/tests/test_validators/test_constraints.py` (16 tests, all passing)
+- ✅ `examples/validation_examples/phase1_tolerance_demo.py` (6 demos)
+
+**测试结果**:
+- Phase 0 tests: 13/13 passed ✓
+- Phase 1 tests: 16/16 passed ✓
+- MP structures tested: BaTiO3, Al2O3, ZnS
+- Perturbation tests: Bond stretch (0.95-1.20x), Random displacement (0-0.3Å)
+
+**性能特性**:
+- Primitive cell (<10 atoms): 1-5 seconds ✅ (LLM反馈可用)
+- Supercell (40+ atoms): 60-180 seconds ⚠️ (最终验证)
+
+**Git提交**: d4c4ef1, 19c99a1
+**详细文档**: `docs/validation/PHASE1_VALIDATION_FINDINGS.md`, `docs/validation/PHASE1_SUMMARY.md`
+
+---
+
+### Phase 1 (Original Plan - For Reference)
 
 #### 1.1 Coordination Analysis with Quantification
     """Test coordination in Cu(111) surface"""

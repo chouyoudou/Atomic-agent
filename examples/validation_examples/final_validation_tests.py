@@ -1,9 +1,21 @@
 """Final comprehensive validation tests with MP structures.
 
-Tests realistic scenarios for LLM agent feedback:
+⚠️ CONCEPT VALIDATION - Designed for single structure testing
+
+This script demonstrates comprehensive validation testing patterns including:
 1. Perfect vs perturbed structures
-2. Tolerance threshold tuning
-3. Edge cases and corner cases
+2. Tolerance threshold tuning (strict/normal/relaxed)
+3. Edge cases (extreme compression, large noise)
+
+Performance:
+- Designed for primitive cells (<10 atoms)
+- Runtime: ~2-3 minutes per structure
+- Can be adapted for batch testing
+
+Usage:
+    python examples/validation_examples/final_validation_tests.py
+
+Note: Falls back to Cu FCC if no MP structures are cached.
 """
 
 import sys
