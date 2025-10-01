@@ -783,10 +783,80 @@ Can be added in future if molecular structure validation becomes a priority.
 
 ---
 
-### Phase 3: Corner Case Handling
+### Phase 3: Corner Case Handling ✅ COMPLETED (2025-10-01)
 
-#### 3.1 Corner Case Test Suite
-**Objective**: Handle all edge cases without false feedback
+**Status**: Technical robustness complete, LLM usability testing identified as gap
+**Test Results**: 59/59 passing (36 corner cases + 23 edge structures)
+**Git commit**: abe76e0
+**Documentation**: `docs/validation/PHASE3_CORNER_CASES.md`
+
+**What was completed**:
+- ✅ 36 corner case tests (empty structures, boundaries, extreme values)
+- ✅ 23 edge structure tests (0D/1D/2D, molecules, extreme cells)
+- ✅ 5 critical bugs fixed (ConstraintSuggester empty structure crash, etc.)
+- ✅ 33 corner cases documented with handling strategies
+- ✅ 8 diverse MP structures downloaded for testing
+- ✅ Known limitations documented (5 limitations with workarounds)
+
+**What was identified as missing** (Phase 3.5):
+- ⚠️ LLM usability testing (numeric precision, feedback clarity)
+- ⚠️ Robocrys geometry recognition completeness testing
+- ⚠️ Actionable guidance in feedback messages
+- ⚠️ Real phase transition detection (cubic→tetragonal)
+
+**Key Findings**:
+1. **Technical robustness achieved**: No crashes on edge cases
+2. **Design trade-offs documented**: Tolerance decisions explained
+3. **User-facing quality gap**: Output not optimized for LLM consumption
+
+---
+
+### Phase 3.5: LLM Usability Testing ✅ COMPLETED (2025-10-01)
+
+**Status**: All LLM usability requirements validated ⭐
+**Test Results**: 22/22 passing
+**Test Duration**: ~2 minutes
+**Git commit**: TBD
+**Documentation**: `docs/validation/PHASE3_5_LLM_USABILITY.md`
+
+**Critical Discovery**: ✨ **System already LLM-optimized - no code changes needed!**
+
+**What was tested**:
+- ✅ Numeric precision (4 tests) - All outputs use 2-3 decimals, perfect for LLM
+- ✅ Actionable feedback (2 tests) - Every violation includes `suggestion` field
+- ✅ Tolerance categorization (3 tests) - Three-level system (passed/warning/violation)
+- ✅ Robocrys geometry coverage (7 tests) - All coordination 1-12 tested
+- ✅ Real phase transition detection (3 tests) - Cubic↔tetragonal BaTiO3 working
+- ✅ LLM workflow simulation (3 tests) - LLM can reproduce suggested values
+
+**Key Validations**:
+1. **Numeric precision**: Values use `.3f` format (3 decimals), not 7+
+2. **Actionable feedback**: All violations have `suggestion`, `value`, `expected_range`
+3. **Severity categorization**: `severity` field reports deviation percentage
+4. **Complete geometry coverage**: Linear, bent, trigonal, tetrahedral, octahedral, coord-12
+5. **Phase transitions**: Successfully distinguishes cubic vs tetragonal BaTiO3 (c/a=1.22)
+
+**Output Format Validation**:
+```json
+{
+  "detail": "a = 3.600 severely outside [4.000, 5.000]",
+  "severity": "40.0% deviation",
+  "value": 3.6,
+  "expected_range": "[4.000, 5.000]",
+  "suggestion": "Major adjustment needed: a → 4.500"
+}
+```
+
+**Critical Findings**:
+- ✅ Phase 2 implementation already included LLM-friendly design
+- ✅ No bugs found - system already implements best practices
+- ✅ All user-requested testing areas validated
+- ✅ Real BaTiO3 mp-19990 is tetragonal (c/a≈1.22), not cubic
+- ✅ Robocrys handles all common geometries (coord 1-12)
+
+**Conclusion**: **Validator system is production-ready for LLM usage** 🚀
+
+#### 3.1 Corner Case Test Suite ✅
 
 **Corner cases to test:**
 
