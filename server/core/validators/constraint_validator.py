@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Optional
 import numpy as np
+from ase import Atoms
 
 
 class ConstraintValidator:
@@ -9,19 +10,44 @@ class ConstraintValidator:
     - passed: within tolerance range [min, max]
     - warning: slightly outside tolerance (5-15% deviation)
     - violation: severely violating constraints (>15% deviation)
+
+    Supports:
+    - Phase 1: coordination, dimensionality, bond_lengths, geometry_likeness
+    - Phase 2: angles, lattice, symmetry, freezing
     """
 
     WARNING_THRESHOLD = 0.05  # 5% beyond tolerance triggers warning
     VIOLATION_THRESHOLD = 0.15  # 15% beyond tolerance triggers violation
 
-    def __init__(self, constraints: Dict[str, Any]):
+    def __init__(
+        self,
+        constraints: Dict[str, Any],
+        atoms: Optional[Atoms] = None,
+        reference_atoms: Optional[Atoms] = None
+    ):
+        """Initialize validator with constraints.
+
+        Args:
+            constraints: Constraint specifications
+            atoms: Current ASE Atoms object (for lattice/symmetry validation)
+            reference_atoms: Reference structure (for freezing validation)
+        """
         self.constraints = constraints
+        self.atoms = atoms
+        self.reference_atoms = reference_atoms
+
+        # Initialize phase 2 validators on demand
+        self._angle_validator = None
+        self._lattice_validator = None
+        self._symmetry_validator = None
+        self._freezing_validator = None
 
     def validate(
         self,
         observations: Dict[str, Any],
         structure_distances: Optional[Dict[int, Dict[int, List[float]]]] = None,
-        structure_angles: Optional[Dict[int, Dict[str, List[float]]]] = None
+        structure_angles: Optional[Dict[int, Dict[str, List[float]]]] = None,
+        reference_observations: Optional[Dict[str, Any]] = None
     ) -> Dict[str, List[Dict[str, Any]]]:
         """Validate observations against constraints.
 
@@ -29,6 +55,7 @@ class ConstraintValidator:
             observations: Observations from GeometryAnalyzer
             structure_distances: Bond distance data from robocrys
             structure_angles: Bond angle data from robocrys
+            reference_observations: Reference observations (for freezing)
 
         Returns:
             Dict with 'passed', 'warnings', and 'violations' lists
@@ -39,6 +66,7 @@ class ConstraintValidator:
             "violations": []
         }
 
+        # Phase 1 validators
         if "coordination" in self.constraints:
             self._validate_coordination(observations, results)
 
@@ -50,13 +78,133 @@ class ConstraintValidator:
                 observations, structure_distances, results
             )
 
+        if "geometry_likeness" in self.constraints:
+            self._validate_geometry_likeness(observations, results)
+
+        # Phase 2 validators
         if "bond_angles" in self.constraints and structure_angles:
-            self._validate_bond_angles(
+            self._validate_angles_phase2(
                 observations, structure_angles, results
             )
 
-        if "geometry_likeness" in self.constraints:
-            self._validate_geometry_likeness(observations, results)
+        if "lattice" in self.constraints and self.atoms:
+            self._validate_lattice_phase2(results)
+
+        if "symmetry" in self.constraints and self.atoms:
+            self._validate_symmetry_phase2(results)
+
+        if ("frozen_atoms" in self.constraints or
+            "frozen_bonds" in self.constraints or
+            "frozen_angles" in self.constraints or
+            "frozen_coordination" in self.constraints):
+            self._validate_freezing_phase2(
+                observations, reference_observations, results
+            )
+
+        return results
+
+    def _validate_angles_phase2(
+        self,
+        observations: Dict[str, Any],
+        structure_angles: Dict[int, Dict[str, List[float]]],
+        results: Dict[str, List[Dict[str, Any]]]
+    ):
+        """Validate using Phase 2 angle validator.
+
+        Args:
+            observations: Structure observations
+            structure_angles: Robocrys angle data
+            results: Results dict to update
+        """
+        if self._angle_validator is None:
+            from .angle_validator import AngleConstraintValidator
+            self._angle_validator = AngleConstraintValidator(
+                self.constraints["bond_angles"]
+            )
+
+        angle_results = self._angle_validator.validate(
+            observations, structure_angles
+        )
+        self._merge_results(results, angle_results)
+
+    def _validate_lattice_phase2(
+        self,
+        results: Dict[str, List[Dict[str, Any]]]
+    ):
+        """Validate using Phase 2 lattice validator.
+
+        Args:
+            results: Results dict to update
+        """
+        if self._lattice_validator is None:
+            from .lattice_validator import LatticeConstraintValidator
+            self._lattice_validator = LatticeConstraintValidator(
+                self.constraints["lattice"]
+            )
+
+        lattice_results = self._lattice_validator.validate(self.atoms)
+        self._merge_results(results, lattice_results)
+
+    def _validate_symmetry_phase2(
+        self,
+        results: Dict[str, List[Dict[str, Any]]]
+    ):
+        """Validate using Phase 2 symmetry validator.
+
+        Args:
+            results: Results dict to update
+        """
+        if self._symmetry_validator is None:
+            from .symmetry_validator import SymmetryConstraintValidator
+            self._symmetry_validator = SymmetryConstraintValidator(
+                self.constraints["symmetry"]
+            )
+
+        symmetry_results = self._symmetry_validator.validate(self.atoms)
+        self._merge_results(results, symmetry_results)
+
+    def _validate_freezing_phase2(
+        self,
+        observations: Dict[str, Any],
+        reference_observations: Optional[Dict[str, Any]],
+        results: Dict[str, List[Dict[str, Any]]]
+    ):
+        """Validate using Phase 2 freezing validator.
+
+        Args:
+            observations: Current observations
+            reference_observations: Reference observations
+            results: Results dict to update
+        """
+        if self._freezing_validator is None:
+            from .freezing_validator import FreezingConstraintValidator
+            freezing_constraints = {
+                k: v for k, v in self.constraints.items()
+                if k in ["frozen_atoms", "frozen_bonds", "frozen_angles", "frozen_coordination"]
+            }
+            self._freezing_validator = FreezingConstraintValidator(
+                freezing_constraints,
+                self.reference_atoms
+            )
+
+        freezing_results = self._freezing_validator.validate(
+            self.atoms, observations, reference_observations
+        )
+        self._merge_results(results, freezing_results)
+
+    def _merge_results(
+        self,
+        target: Dict[str, List[Dict[str, Any]]],
+        source: Dict[str, List[Dict[str, Any]]]
+    ):
+        """Merge results from sub-validator into main results.
+
+        Args:
+            target: Target results dict
+            source: Source results dict
+        """
+        for key in ["passed", "warnings", "violations"]:
+            target[key].extend(source.get(key, []))
 
         return results
 
