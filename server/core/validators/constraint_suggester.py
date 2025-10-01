@@ -169,10 +169,15 @@ class ConstraintSuggester:
             tolerance: Relative tolerance for ranges
             suggestions: Suggestions dict to update
         """
-        cell = atoms.get_cell()
-        lengths = cell.lengths()
-        angles = cell.angles()
-        volume = atoms.get_volume()
+        # Handle empty structures or structures without cell
+        try:
+            cell = atoms.get_cell()
+            lengths = cell.lengths()
+            angles = cell.angles()
+            volume = atoms.get_volume()
+        except (ValueError, ZeroDivisionError):
+            # No cell or zero volume - skip lattice suggestions
+            return
 
         lattice_constraints = {}
 

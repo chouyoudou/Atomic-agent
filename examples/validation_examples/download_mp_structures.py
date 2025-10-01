@@ -21,10 +21,19 @@ def download_and_save_structures():
     os.makedirs(cache_dir, exist_ok=True)
 
     with MPRester(API_KEY) as mpr:
+        # Phase 3: Expanded structure set covering all crystal systems
         structures_to_download = [
-            ("BaTiO3", "Perovskite"),
-            ("Al2O3", "Corundum"),
-            ("ZnS", "Zinc Blende"),
+            # Existing structures
+            ("BaTiO3", "Perovskite - Cubic/Tetragonal"),
+            ("Al2O3", "Corundum - Rhombohedral/Trigonal"),
+            ("ZnS", "Zinc Blende - Cubic FCC"),
+
+            # Additional structures for diverse testing
+            ("MgO", "Rocksalt - Simple Cubic"),
+            ("Si", "Diamond - Cubic"),
+            ("GaN", "Wurtzite - Hexagonal"),
+            ("Fe", "BCC Metal - Cubic"),
+            ("NaCl", "Rocksalt - Ionic"),
         ]
 
         adaptor = AseAtomsAdaptor()
