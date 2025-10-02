@@ -8,12 +8,13 @@
 
 ## 📖 快速导航
 
-### 🎯 我想...
+### 🎯 我想... / What I Want...
 
-- **了解总体情况** → [VALIDATION_SUMMARY.md](VALIDATION_SUMMARY.md) ⭐ **从这里开始**
-- **查看实现进度** → [VALIDATION_CHECKLIST.md](../VALIDATION_CHECKLIST.md)
-- **运行测试** → [TEST_INSTRUCTIONS.md](TEST_INSTRUCTIONS.md)
-- **了解设计思路** → [VALIDATION_DESIGN.md](VALIDATION_DESIGN.md)
+- **了解总体情况 / Quick Overview** → [QUICK_REVIEW_EN.md](QUICK_REVIEW_EN.md) ⭐ **Start here (10 min)**
+- **完整总结 / Complete Summary** → [VALIDATION_SUMMARY.md](VALIDATION_SUMMARY.md) (30 min)
+- **查看实现进度 / Implementation Progress** → [VALIDATION_CHECKLIST.md](../VALIDATION_CHECKLIST.md)
+- **运行测试 / Run Tests** → [TEST_INSTRUCTIONS.md](TEST_INSTRUCTIONS.md)
+- **了解设计思路 / Design Rationale** → [VALIDATION_DESIGN.md](VALIDATION_DESIGN.md)
 
 ### 📊 阶段报告 (按顺序阅读)
 
@@ -63,13 +64,14 @@
 
 ## 🗂️ 文档分类
 
-### 📋 概览文档
+### 📋 概览文档 / Overview Documents
 
-| 文档 | 描述 | 适合对象 |
+| 文档 / Document | 描述 / Description | 适合对象 / Audience |
 |------|------|---------|
-| [VALIDATION_SUMMARY.md](VALIDATION_SUMMARY.md) | **总结报告** - 最全面的概览 | 所有人 ⭐ |
-| [README.md](README.md) | **本文档** - 导航索引 | 所有人 |
-| [VALIDATION_CHECKLIST.md](../VALIDATION_CHECKLIST.md) | 实现清单和进度跟踪 | 开发者 |
+| [QUICK_REVIEW_EN.md](QUICK_REVIEW_EN.md) | **Quick Review (English)** - 10-minute overview | Reviewers ⭐ |
+| [VALIDATION_SUMMARY.md](VALIDATION_SUMMARY.md) | **总结报告** - 最全面的概览 | 所有人 / Everyone |
+| [README.md](README.md) | **本文档** - 导航索引 | 所有人 / Everyone |
+| [VALIDATION_CHECKLIST.md](../VALIDATION_CHECKLIST.md) | 实现清单和进度跟踪 | 开发者 / Developers |
 
 ### 🔬 技术文档
 
